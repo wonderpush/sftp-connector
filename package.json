@@ -1,0 +1,22 @@
+{
+  "name": "sftp-deliveries-wonderpush",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev": "env-cmd -f ./.env.dev npx nodemon index.js"
+  },
+  "keywords": [],
+  "author": "Emmanuel SARPEDON",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "ssh2-sftp-client": "^7.1.0"
+  },
+  "type": "module",
+  "devDependencies": {
+    "env-cmd": "^10.1.0"
+  }
+}
