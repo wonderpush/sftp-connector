@@ -25,8 +25,8 @@ getFilesList(newListing).then(() => {
 			Object.keys(newListing).forEach(fileName => {
 				// to check new files
 				if (Object.keys(lastListing).indexOf(fileName) < 0) {
-					console.log("✨ New file detected : ", fileName);
 					candidatesFiles[fileName] = 1;
+					console.log("✨ New file detected : ", fileName);
 				} else {
 					// handle edited files
 					if (
