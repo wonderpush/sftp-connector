@@ -75,6 +75,8 @@ const parseDatasFromCsv = async (path, query) => {
 					return customParams;
 				});
 			}
+
+			setLogs(JSON.stringify(query));
 		})
 		.then(() => sftp.end());
 };

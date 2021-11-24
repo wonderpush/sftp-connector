@@ -8,6 +8,7 @@ import fs from "fs";
 import setLogs from "./helpers/setLogs.js";
 import getFilesList from "./helpers/getFilesList.js";
 import parseDatasFromCsv from "./helpers/parseDatasFromCsv.js";
+import postQuery from "./helpers/postQuery.js";
 
 let candidatesFiles = {};
 let lastListing = {};
@@ -73,8 +74,11 @@ getFilesList(newListing, process.env.FTP_PATH).then(() => {
 
 						let query = {};
 
-						parseDatasFromCsv(process.env.FTP_PATH + fileName, query);
-						// ).then(() => console.log(query));
+						parseDatasFromCsv(process.env.FTP_PATH + fileName, query).then(
+							() => {
+								postQuery(process.env.WP_ENDPOINT, query);
+							}
+						);
 					}
 				});
 			})
