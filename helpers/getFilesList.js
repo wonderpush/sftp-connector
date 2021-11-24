@@ -26,7 +26,7 @@ const getFilesList = async (list, path) => {
 						- : file
 				*/
 				
-				if (file.type === "-") {
+				if (file.type === "-" && file.name.slice(0, 1) !== ".") { // to exclude directories, links and hidden files
 					list[file.name] = {
 						size: file.size,
 						modifyTime: file.modifyTime
