@@ -8,7 +8,7 @@ const setLogs = (...argv) => {
 		logs += `${argument}`;
 	});
 
-	console.log(dayjs().format("YYYY-MM-DD HH:mm:ss"), ":", logs);
+	console.log(dayjs().format("YYYY-MM-DD HH:mm:ss"), "\n", logs);
 };
 
 export default setLogs;
