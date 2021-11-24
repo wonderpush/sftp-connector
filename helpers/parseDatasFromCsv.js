@@ -48,8 +48,6 @@ const parseDatasFromCsv = async (path, query) => {
 			const notificationParamsColumns = Object.keys(records[0]).filter(
 				column => {
 					return (
-						column !== "nom" &&
-						column !== "prenom" &&
 						column !== (process.env.CSV_COLUMN_USER_ID || "user_id") &&
 						column !== (process.env.CSV_COLUMN_CAMPAIGN_ID || "campaign_id")
 					);
