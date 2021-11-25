@@ -18,7 +18,7 @@ getFilesList(newListing, process.env.FTP_PATH).then(() => {
 	setLogs(logs.sshConnectedInfo);
 
 	Object.keys(newListing).forEach(fileName => {
-		candidatesFiles[fileName] = 1;
+		candidatesFiles[fileName] = 0;
 
 		setLogs(logs.FileInfo, fileName);
 	});
@@ -28,6 +28,8 @@ getFilesList(newListing, process.env.FTP_PATH).then(() => {
 		newListing = {};
 
 		getFilesList(newListing, process.env.FTP_PATH)
+
+			// ! FILE SELECTION
 			.then(async () => {
 				// to check deleted files
 				Object.keys(lastListing).forEach(fileName => {
@@ -65,20 +67,27 @@ getFilesList(newListing, process.env.FTP_PATH).then(() => {
 					}
 				});
 			})
+			// ! FILE PROCESSING
 			.then(() => {
-				Object.keys(candidatesFiles).forEach(fileName => {
-					if (candidatesFiles[fileName] > process.env.STALE_FILE_CHECKS) {
-						delete candidatesFiles[fileName];
+				const staleFileChecks = Number(process.env.STALE_FILE_CHECKS) || 5;
 
+				Object.keys(candidatesFiles).forEach(fileName => {
+					if (candidatesFiles[fileName] === staleFileChecks) {
 						setLogs(logs.startFileProcessInfo, fileName);
 
-						let query = {};
+						let queriesArray = [];
 
-						parseDatasFromCsv(process.env.FTP_PATH + fileName, query).then(
-							() => {
-								postQuery(process.env.WP_ENDPOINT, query);
-							}
-						);
+						parseDatasFromCsv(
+							process.env.FTP_PATH + fileName,
+							queriesArray
+						).then(() => {
+							queriesArray.forEach(async query => {
+								await postQuery(process.env.WP_ENDPOINT, query);
+
+								setLogs(JSON.stringify(query));
+
+							});
+						});
 					}
 				});
 			})

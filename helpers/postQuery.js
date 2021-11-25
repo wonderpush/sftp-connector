@@ -5,9 +5,17 @@ import setLogs from "./setLogs.js";
 const postQuery = async (url, query) => {
 	try {
 		const response = await axios.post(url, query);
-		setLogs(response);
+
+		setLogs(JSON.stringify(response.data));
+
+		if (response.data.success) {
+			return true;
+		}
+		
 	} catch (error) {
 		setLogs(JSON.stringify(error.message));
+
+		return false;
 	}
 };
 

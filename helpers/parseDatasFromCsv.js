@@ -6,7 +6,7 @@ import { parse } from "csv-parse/sync";
 // HELPERS
 import setLogs from "./setLogs.js";
 
-const parseDatasFromCsv = async (path, query) => {
+const parseDatasFromCsv = async (path, queriesArray) => {
 	const sftp = new Client();
 
 	const config = {
@@ -26,6 +26,7 @@ const parseDatasFromCsv = async (path, query) => {
 			return sftp.get(remotePath, tmpPath);
 		})
 		.then(() => {
+			/* Store tmp file */
 			const input = fs.readFileSync(
 				tmpPath,
 				process.env.CSV_PARSE_ENCODING || "utf8"
@@ -33,6 +34,7 @@ const parseDatasFromCsv = async (path, query) => {
 
 			setLogs(input);
 
+			/* Parsing csv file */
 			const records = parse(input, {
 				columns: process.env.CSV_PARSE_COLUMNS === "true" || true,
 				comment: process.env.CSV_PARSE_COMMENT || "",
@@ -54,6 +56,9 @@ const parseDatasFromCsv = async (path, query) => {
 				}
 			);
 
+			/* Create query */
+			const query = {};
+
 			query.accessToken = process.env.WP_ACCESS_TOKEN;
 
 			query.targetUserIds = records.map(
@@ -74,7 +79,44 @@ const parseDatasFromCsv = async (path, query) => {
 				});
 			}
 
-			setLogs(JSON.stringify(query));
+			// setLogs(JSON.stringify(query));
+
+			/* Slice query*/
+			const maxDeliveries =
+				Number(process.env.WP_MAXIMUM_DELIVERIES_TARGETS) || 10000;
+
+			const numberOfQueries = Math.round(
+				query.targetUserIds.length / maxDeliveries
+			);
+
+			// range of the query
+			let startIndex = 0;
+			let endIndex = maxDeliveries;
+
+			for (let i = 0; i < numberOfQueries; i++) {
+				const tmpQuery = {};
+
+				tmpQuery.accessToken = query.accessToken;
+				tmpQuery.targetUserIds = query.targetUserIds.slice(
+					startIndex,
+					endIndex
+				);
+				
+				tmpQuery.campaignId = query.campaignId;
+
+				if (query.notificationParams.length > 0) {
+					tmpQuery.notificationParams = query.notificationParams.slice(
+						startIndex,
+						endIndex
+					);
+				}
+
+				queriesArray.push(tmpQuery);
+
+				startIndex = endIndex;
+				endIndex += maxDeliveries;
+			}
+
 		})
 		.then(() => sftp.end());
 };
