@@ -1,6 +1,5 @@
 // ASSETS
 import logs from "./assets/logs.js";
-import fs from "fs";
 
 // DEPENDENCIES
 
@@ -22,43 +21,39 @@ getFilesList(process.env.FTP_PATH).then(newListing => {
 		getFilesList(process.env.FTP_PATH)
 			// ! FILE SELECTION
 			.then(newListing => {
+				// to check new files
+				Object.keys(newListing).forEach(fileName => {
+					if (!Object.keys(lastListing).includes(fileName)) {
+						candidateFiles[fileName] = 0;
+
+						setLogs(logs.newFileInfo, fileName);
+					}
+				});
+
 				// to check deleted files
 				Object.keys(lastListing).forEach(fileName => {
-					if (Object.keys(newListing).indexOf(fileName) < 0) {
+					if (!Object.keys(newListing).includes(fileName)) {
 						delete candidateFiles[fileName];
 
 						setLogs(logs.fileDeletedInfo, fileName);
 					}
 				});
 
-				Object.keys(newListing).forEach(fileName => {
-					// to check new files
-					if (Object.keys(lastListing).indexOf(fileName) < 0) {
-						candidateFiles[fileName] = 1;
-
-						setLogs(logs.newFileInfo, fileName);
-					} else {
-						// handle edited files
-						if (
-							newListing[fileName].modifyTime !==
-							lastListing[fileName].modifyTime
-						) {
-							delete candidateFiles[fileName];
+				// to check updated files
+				Object.keys(candidateFiles).forEach(fileName => {
+					if (lastListing[fileName] && newListing[fileName]) {
+						if ( newListing[fileName].modifyTime !== lastListing[fileName].modifyTime || newListing[fileName].size !== lastListing[fileName].size ) {
+							candidateFiles[fileName] = 0;
 						}
 
-						// handle non edited files
-						if (
-							newListing[fileName].modifyTime ===
-							lastListing[fileName].modifyTime
-						) {
-							candidateFiles[fileName] = candidateFiles[fileName]
-								? candidateFiles[fileName] + 1
-								: 1;
+						if ( newListing[fileName].modifyTime === lastListing[fileName].modifyTime && newListing[fileName].size === lastListing[fileName].size ) {
+							candidateFiles[fileName]++;
 						}
 					}
 				});
 
 				lastListing = { ...newListing };
+
 			})
 			// ! FILE PROCESSING
 			.then(() => {
@@ -68,18 +63,21 @@ getFilesList(process.env.FTP_PATH).then(newListing => {
 					if (candidateFiles[fileName] === staleFileChecks) {
 						setLogs(logs.startFileProcessInfo, fileName);
 
-						let queriesArray = [];
+						parseDatasFromCsv(process.env.FTP_PATH + fileName).then(
+							queriesArray => {
+								// queriesArray.forEach(query => {
+								// 	postQuery(process.env.WP_ENDPOINT, query);
 
-						parseDatasFromCsv(
-							process.env.FTP_PATH + fileName,
-							queriesArray
-						).then(() => {
-							queriesArray.forEach(async query => {
-								await postQuery(process.env.WP_ENDPOINT, query);
+								// 	setLogs(JSON.stringify(query));
+								// });
 
-								setLogs(JSON.stringify(query));
-							});
-						});
+								for (const query of queriesArray) {
+									postQuery(process.env.WP_ENDPOINT, query);
+
+									setLogs(JSON.stringify(query));
+								}
+							}
+						);
 					}
 				});
 			})

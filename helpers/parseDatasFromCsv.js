@@ -6,7 +6,7 @@ import { parse } from "csv-parse/sync";
 // HELPERS
 import setLogs from "./setLogs.js";
 
-const parseDatasFromCsv = async (path, queriesArray) => {
+const parseDatasFromCsv = async path => {
 	const sftp = new Client();
 
 	const config = {
@@ -20,6 +20,8 @@ const parseDatasFromCsv = async (path, queriesArray) => {
 
 	let tmpPath = "./.tmp.csv";
 
+	const queriesArray = [];
+
 	await sftp
 		.connect(config)
 		.then(() => {
@@ -31,8 +33,6 @@ const parseDatasFromCsv = async (path, queriesArray) => {
 				tmpPath,
 				process.env.CSV_PARSE_ENCODING || "utf8"
 			);
-
-			setLogs(input);
 
 			/* Parsing csv file */
 			const records = parse(input, {
@@ -85,7 +85,7 @@ const parseDatasFromCsv = async (path, queriesArray) => {
 			const maxDeliveries =
 				Number(process.env.WP_MAXIMUM_DELIVERIES_TARGETS) || 10000;
 
-			const numberOfQueries = Math.round(
+			const numberOfQueries = Math.ceil(
 				query.targetUserIds.length / maxDeliveries
 			);
 
@@ -101,7 +101,7 @@ const parseDatasFromCsv = async (path, queriesArray) => {
 					startIndex,
 					endIndex
 				);
-				
+
 				tmpQuery.campaignId = query.campaignId;
 
 				if (query.notificationParams.length > 0) {
@@ -116,9 +116,10 @@ const parseDatasFromCsv = async (path, queriesArray) => {
 				startIndex = endIndex;
 				endIndex += maxDeliveries;
 			}
-
 		})
 		.then(() => sftp.end());
+
+	return queriesArray;
 };
 
 export default parseDatasFromCsv;
