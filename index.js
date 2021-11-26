@@ -4,7 +4,7 @@ import logs from "./assets/logs.js";
 // DEPENDENCIES
 
 // HELPERS
-import setLogs from "./helpers/setLogs.js";
+import log from "./helpers/log.js";
 import getFilesList from "./helpers/getFilesList.js";
 import parseDatasFromCsv from "./helpers/parseDatasFromCsv.js";
 import postQuery from "./helpers/postQuery.js";
@@ -13,7 +13,7 @@ let candidateFiles = {};
 let lastListing = {};
 
 getFilesList(process.env.FTP_PATH).then(newListing => {
-	setLogs(logs.sshConnectedInfo);
+	log(logs.sshConnectedInfo);
 
 	lastListing = { ...newListing };
 
@@ -26,7 +26,7 @@ getFilesList(process.env.FTP_PATH).then(newListing => {
 					if (!Object.keys(lastListing).includes(fileName)) {
 						candidateFiles[fileName] = 0;
 
-						setLogs(logs.newFileInfo, fileName);
+						log(logs.newFileInfo, fileName);
 					}
 				});
 
@@ -35,7 +35,7 @@ getFilesList(process.env.FTP_PATH).then(newListing => {
 					if (!Object.keys(newListing).includes(fileName)) {
 						delete candidateFiles[fileName];
 
-						setLogs(logs.fileDeletedInfo, fileName);
+						log(logs.fileDeletedInfo, fileName);
 					}
 				});
 
@@ -61,26 +61,18 @@ getFilesList(process.env.FTP_PATH).then(newListing => {
 
 				Object.keys(candidateFiles).forEach(fileName => {
 					if (candidateFiles[fileName] === staleFileChecks) {
-						setLogs(logs.startFileProcessInfo, fileName);
+						log(logs.startFileProcessInfo, fileName);
 
 						parseDatasFromCsv(process.env.FTP_PATH + fileName).then(
 							queriesArray => {
-								// queriesArray.forEach(query => {
-								// 	postQuery(process.env.WP_ENDPOINT, query);
-
-								// 	setLogs(JSON.stringify(query));
-								// });
-
 								for (const query of queriesArray) {
-									postQuery(process.env.WP_ENDPOINT, query);
-
-									setLogs(JSON.stringify(query));
+									postQuery(process.env.WP_ENDPOINT, query, fileName);
 								}
 							}
 						);
 					}
 				});
 			})
-			.catch(error => setLogs(error));
+			.catch(error => log(error));
 	}, process.env.LISTING_INTERVAL_MS);
 });
