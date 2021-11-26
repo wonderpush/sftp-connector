@@ -4,17 +4,10 @@ import fs from "fs";
 import { parse } from "csv-parse/sync";
 
 // HELPERS
-import setLogs from "./setLogs.js";
+import log from "./log.js";
 
-const parseDatasFromCsv = async path => {
+const parseDataFromCsv = async (sftpConfig, path) => {
 	const sftp = new Client();
-
-	const config = {
-		host: process.env.FTP_HOST,
-		port: process.env.FTP_PORT,
-		username: process.env.FTP_USER,
-		privateKey: fs.readFileSync(process.env.FTP_PRIVATE_KEY)
-	};
 
 	let remotePath = path;
 
@@ -23,7 +16,7 @@ const parseDatasFromCsv = async path => {
 	const queriesArray = [];
 
 	await sftp
-		.connect(config)
+		.connect(sftpConfig)
 		.then(() => {
 			return sftp.get(remotePath, tmpPath);
 		})
@@ -94,22 +87,27 @@ const parseDatasFromCsv = async path => {
 			let endIndex = maxDeliveries;
 
 			for (let i = 0; i < numberOfQueries; i++) {
-				const tmpQuery = {};
+				const tmpQuery = { data: {}, range: {} };
 
-				tmpQuery.accessToken = query.accessToken;
-				tmpQuery.targetUserIds = query.targetUserIds.slice(
+				tmpQuery.data.accessToken = query.accessToken;
+				tmpQuery.data.targetUserIds = query.targetUserIds.slice(
 					startIndex,
 					endIndex
 				);
 
-				tmpQuery.campaignId = query.campaignId;
+				tmpQuery.data.campaignId = query.campaignId;
 
 				if (query.notificationParams.length > 0) {
-					tmpQuery.notificationParams = query.notificationParams.slice(
+					tmpQuery.data.notificationParams = query.notificationParams.slice(
 						startIndex,
 						endIndex
 					);
 				}
+
+				tmpQuery.range = {
+					fromLine: startIndex + 1,
+					toLine: Math.min(endIndex, query.notificationParams.length)
+				};
 
 				queriesArray.push(tmpQuery);
 
@@ -122,4 +120,4 @@ const parseDatasFromCsv = async path => {
 	return queriesArray;
 };
 
-export default parseDatasFromCsv;
+export default parseDataFromCsv;
