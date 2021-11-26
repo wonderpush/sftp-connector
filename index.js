@@ -2,23 +2,33 @@
 import logs from "./assets/logs.js";
 
 // DEPENDENCIES
+import fs from "fs";
+import Client from "ssh2-sftp-client";
 
 // HELPERS
 import log from "./helpers/log.js";
 import getFilesList from "./helpers/getFilesList.js";
-import parseDatasFromCsv from "./helpers/parseDatasFromCsv.js";
+import parseDataFromCsv from "./helpers/parseDataFromCsv.js";
 import postQuery from "./helpers/postQuery.js";
 
 let candidateFiles = {};
 let lastListing = {};
 
-getFilesList(process.env.FTP_PATH).then(newListing => {
+const sftp = new Client();
+const sftpConfig = {
+	host: process.env.FTP_HOST,
+	port: process.env.FTP_PORT,
+	username: process.env.FTP_USER,
+	privateKey: fs.readFileSync(process.env.FTP_PRIVATE_KEY)
+};
+
+getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 	log(logs.sshConnectedInfo);
 
 	lastListing = { ...newListing };
 
 	setInterval(() => {
-		getFilesList(process.env.FTP_PATH)
+		getFilesList(sftp, sftpConfig, process.env.FTP_PATH)
 			// ! FILE SELECTION
 			.then(newListing => {
 				// to check new files
@@ -42,18 +52,22 @@ getFilesList(process.env.FTP_PATH).then(newListing => {
 				// to check updated files
 				Object.keys(candidateFiles).forEach(fileName => {
 					if (lastListing[fileName] && newListing[fileName]) {
-						if ( newListing[fileName].modifyTime !== lastListing[fileName].modifyTime || newListing[fileName].size !== lastListing[fileName].size ) {
+						if (	newListing[fileName].modifyTime !== lastListing[fileName].modifyTime ||
+							newListing[fileName].size !== lastListing[fileName].size
+						) {
 							candidateFiles[fileName] = 0;
 						}
 
-						if ( newListing[fileName].modifyTime === lastListing[fileName].modifyTime && newListing[fileName].size === lastListing[fileName].size ) {
+						if (
+							newListing[fileName].modifyTime === lastListing[fileName].modifyTime &&
+							newListing[fileName].size === lastListing[fileName].size
+						) {
 							candidateFiles[fileName]++;
 						}
 					}
 				});
 
 				lastListing = { ...newListing };
-
 			})
 			// ! FILE PROCESSING
 			.then(() => {
@@ -63,7 +77,7 @@ getFilesList(process.env.FTP_PATH).then(newListing => {
 					if (candidateFiles[fileName] === staleFileChecks) {
 						log(logs.startFileProcessInfo, fileName);
 
-						parseDatasFromCsv(process.env.FTP_PATH + fileName).then(
+						parseDataFromCsv(sftpConfig, process.env.FTP_PATH + fileName).then(
 							queriesArray => {
 								for (const query of queriesArray) {
 									postQuery(process.env.WP_ENDPOINT, query, fileName);

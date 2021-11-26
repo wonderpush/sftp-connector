@@ -1,21 +1,13 @@
 // DEPENDENCIES
 import Client from "ssh2-sftp-client";
-import fs from "fs";
 
-const sftp = new Client();
+// const sftp = new Client();
 
-const config = {
-	host: process.env.FTP_HOST,
-	port: process.env.FTP_PORT,
-	username: process.env.FTP_USER,
-	privateKey: fs.readFileSync(process.env.FTP_PRIVATE_KEY)
-};
-
-const getFilesList = async path => {
+const getFilesList = async (sftp, sftpConfig, path) => {
 	const newListing = {};
 
 	await sftp
-		.connect(config)
+		.connect(sftpConfig)
 		.then(() => {
 			return sftp.list(path || "/");
 		})
