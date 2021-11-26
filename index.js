@@ -10,31 +10,22 @@ import getFilesList from "./helpers/getFilesList.js";
 import parseDatasFromCsv from "./helpers/parseDatasFromCsv.js";
 import postQuery from "./helpers/postQuery.js";
 
-let candidatesFiles = {};
+let candidateFiles = {};
 let lastListing = {};
-let newListing = {};
 
-getFilesList(newListing, process.env.FTP_PATH).then(() => {
+getFilesList(process.env.FTP_PATH).then(newListing => {
 	setLogs(logs.sshConnectedInfo);
 
-	Object.keys(newListing).forEach(fileName => {
-		candidatesFiles[fileName] = 0;
-
-		setLogs(logs.FileInfo, fileName);
-	});
+	lastListing = { ...newListing };
 
 	setInterval(() => {
-		lastListing = { ...newListing };
-		newListing = {};
-
-		getFilesList(newListing, process.env.FTP_PATH)
-
+		getFilesList(process.env.FTP_PATH)
 			// ! FILE SELECTION
-			.then(async () => {
+			.then(newListing => {
 				// to check deleted files
 				Object.keys(lastListing).forEach(fileName => {
 					if (Object.keys(newListing).indexOf(fileName) < 0) {
-						delete candidatesFiles[fileName];
+						delete candidateFiles[fileName];
 
 						setLogs(logs.fileDeletedInfo, fileName);
 					}
@@ -43,7 +34,7 @@ getFilesList(newListing, process.env.FTP_PATH).then(() => {
 				Object.keys(newListing).forEach(fileName => {
 					// to check new files
 					if (Object.keys(lastListing).indexOf(fileName) < 0) {
-						candidatesFiles[fileName] = 1;
+						candidateFiles[fileName] = 1;
 
 						setLogs(logs.newFileInfo, fileName);
 					} else {
@@ -52,7 +43,7 @@ getFilesList(newListing, process.env.FTP_PATH).then(() => {
 							newListing[fileName].modifyTime !==
 							lastListing[fileName].modifyTime
 						) {
-							delete candidatesFiles[fileName];
+							delete candidateFiles[fileName];
 						}
 
 						// handle non edited files
@@ -60,19 +51,21 @@ getFilesList(newListing, process.env.FTP_PATH).then(() => {
 							newListing[fileName].modifyTime ===
 							lastListing[fileName].modifyTime
 						) {
-							candidatesFiles[fileName] = candidatesFiles[fileName]
-								? candidatesFiles[fileName] + 1
+							candidateFiles[fileName] = candidateFiles[fileName]
+								? candidateFiles[fileName] + 1
 								: 1;
 						}
 					}
 				});
+
+				lastListing = { ...newListing };
 			})
 			// ! FILE PROCESSING
 			.then(() => {
 				const staleFileChecks = Number(process.env.STALE_FILE_CHECKS) || 5;
 
-				Object.keys(candidatesFiles).forEach(fileName => {
-					if (candidatesFiles[fileName] === staleFileChecks) {
+				Object.keys(candidateFiles).forEach(fileName => {
+					if (candidateFiles[fileName] === staleFileChecks) {
 						setLogs(logs.startFileProcessInfo, fileName);
 
 						let queriesArray = [];
@@ -85,7 +78,6 @@ getFilesList(newListing, process.env.FTP_PATH).then(() => {
 								await postQuery(process.env.WP_ENDPOINT, query);
 
 								setLogs(JSON.stringify(query));
-
 							});
 						});
 					}

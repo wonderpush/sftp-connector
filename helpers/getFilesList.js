@@ -11,13 +11,16 @@ const config = {
 	privateKey: fs.readFileSync(process.env.FTP_PRIVATE_KEY)
 };
 
-const getFilesList = async (list, path) => {
+const getFilesList = async path => {
+	const newListing = {};
+
 	await sftp
 		.connect(config)
 		.then(() => {
 			return sftp.list(path || "/");
 		})
 		.then(async data => {
+
 			await data.forEach(file => {
 				/*
 					File's type :
@@ -25,16 +28,21 @@ const getFilesList = async (list, path) => {
 						l : link
 						- : file
 				*/
-				
-				if (file.type === "-" && file.name.slice(0, 1) !== ".") { // to exclude directories, links and hidden files
-					list[file.name] = {
+
+				if (file.type === "-" && file.name.slice(0, 1) !== ".") {
+					// to exclude directories, links and hidden files
+					newListing[file.name] = {
 						size: file.size,
 						modifyTime: file.modifyTime
 					};
 				}
 			});
-		})
-		.then(() => sftp.end());
+
+			sftp.end();
+
+		});
+
+	return newListing;
 };
 
 export default getFilesList;
