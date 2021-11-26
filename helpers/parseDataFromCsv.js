@@ -1,29 +1,30 @@
 // DEPENDENCIES
 import Client from "ssh2-sftp-client";
 import fs from "fs";
+import * as path from "path";
+import os from "os";
 import { parse } from "csv-parse/sync";
 
 // HELPERS
-import log from "./log.js";
 
-const parseDataFromCsv = async (sftpConfig, path) => {
+const parseDataFromCsv = async (sftpConfig, remotePath) => {
 	const sftp = new Client();
 
-	let remotePath = path;
-
-	let tmpPath = "./.tmp.csv";
+	// temporary file
+	let tmpDir = fs.mkdtempSync(path.join(os.tmpdir()));
+	let tmpFile = tmpDir + "/" + remotePath.split("/").pop();
 
 	const queriesArray = [];
 
 	await sftp
 		.connect(sftpConfig)
 		.then(() => {
-			return sftp.get(remotePath, tmpPath);
+			return sftp.get(remotePath, tmpFile);
 		})
 		.then(() => {
 			/* Store tmp file */
 			const input = fs.readFileSync(
-				tmpPath,
+				tmpFile,
 				process.env.CSV_PARSE_ENCODING || "utf8"
 			);
 
@@ -39,6 +40,9 @@ const parseDataFromCsv = async (sftpConfig, path) => {
 				skip_empty_lines:
 					process.env.CSV_PARSE_SKIP_EMPTY_LINES === "true" || true
 			});
+
+			/* Delete temporary directory */
+			fs.rmdirSync(tmpDir, { recursive: true });
 
 			const notificationParamsColumns = Object.keys(records[0]).filter(
 				column => {
@@ -71,8 +75,6 @@ const parseDataFromCsv = async (sftpConfig, path) => {
 					return customParams;
 				});
 			}
-
-			// setLogs(JSON.stringify(query));
 
 			/* Slice query*/
 			const maxDeliveries =
