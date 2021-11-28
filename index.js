@@ -52,16 +52,13 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 				// to check updated files
 				Object.keys(candidateFiles).forEach(fileName => {
 					if (lastListing[fileName] && newListing[fileName]) {
-						if (	newListing[fileName].modifyTime !== lastListing[fileName].modifyTime ||
+						if (
+							newListing[fileName].modifyTime !==
+								lastListing[fileName].modifyTime ||
 							newListing[fileName].size !== lastListing[fileName].size
 						) {
 							candidateFiles[fileName] = 0;
-						}
-
-						if (
-							newListing[fileName].modifyTime === lastListing[fileName].modifyTime &&
-							newListing[fileName].size === lastListing[fileName].size
-						) {
+						} else {
 							candidateFiles[fileName]++;
 						}
 					}
@@ -70,17 +67,24 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 				lastListing = { ...newListing };
 			})
 			// ! FILE PROCESSING
-			.then(() => {
+			.then(async () => {
 				const staleFileChecks = Number(process.env.STALE_FILE_CHECKS) || 5;
 
-				Object.keys(candidateFiles).forEach(fileName => {
+				Object.keys(candidateFiles).forEach(async fileName => {
 					if (candidateFiles[fileName] === staleFileChecks) {
 						log(logs.startFileProcessInfo, fileName);
 
-						parseDataFromCsv(sftpConfig, process.env.FTP_PATH + fileName).then(
-							queriesArray => {
+						const path =
+							process.env.FTP_PATH.slice(-1) === "/"
+								? process.env.FTP_PATH + fileName.replace(/^.*[\\\/]/, "")
+								: process.env.FTP_PATH +
+								  "/" +
+								  fileName.replace(/^.*[\\\/]/, "");
+
+						await parseDataFromCsv(sftpConfig, path).then(
+							async queriesArray => {
 								for (const query of queriesArray) {
-									postQuery(process.env.WP_ENDPOINT, query, fileName);
+									await postQuery(process.env.WP_ENDPOINT, query, fileName);
 								}
 							}
 						);

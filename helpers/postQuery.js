@@ -4,13 +4,12 @@ import log from "./log.js";
 
 const postQuery = async (url, query, file) => {
 	/* Initialize timer*/
-	let timer = 0;
-	const setTimer = setInterval(() => timer++, 1);
+	let timer = new Date().getTime();
 
 	try {
 		const response = await axios.post(url, query.data);
 
-		clearInterval(setTimer);
+		timer = new Date().getTime() - timer;
 
 		log({
 			file: file,
@@ -21,7 +20,7 @@ const postQuery = async (url, query, file) => {
 			response: response.data
 		});
 	} catch (error) {
-		clearInterval(setTimer);
+		timer = new Date().getTime() - timer;
 
 		error.response
 			? log({

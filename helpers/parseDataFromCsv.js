@@ -53,18 +53,18 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 			);
 
 			/* Create queries */
-			const maxDeliveries =
+			const maxTargets =
 				Number(process.env.WP_MAXIMUM_DELIVERIES_TARGETS) || 10000;
 
-			const numberOfQueries = Math.ceil(
-				records.map(item => item[userIdLabel]).length / maxDeliveries
-			);
+			const numberOfQueries = Math.ceil(records.length / maxTargets);
 
 			// range of the query
 			let startIndex = 0;
-			let endIndex = maxDeliveries;
+			let endIndex = Math.min(maxTargets, records.length);
 
 			for (let i = 0; i < numberOfQueries; i++) {
+				const queryRecords = records.slice(startIndex, endIndex);
+				
 				const tmpQuery = {
 					data: {
 						accessToken: "",
@@ -76,35 +76,33 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 				};
 
 				tmpQuery.data.accessToken = process.env.WP_ACCESS_TOKEN;
-				tmpQuery.data.targetUserIds = records
-					.map(item => item[userIdLabel])
-					.slice(startIndex, endIndex);
+				tmpQuery.data.targetUserIds = queryRecords.map(
+					item => item[userIdLabel]
+				);
 
 				tmpQuery.data.campaignId = records[0][campaignIdLabel];
 
 				if (notificationParamsColumns) {
-					tmpQuery.data.notificationParams = records
-						.map(row => {
-							const customParams = {};
+					tmpQuery.data.notificationParams = queryRecords.map(row => {
+						const customParams = {};
 
-							notificationParamsColumns.forEach(parameter => {
-								customParams[parameter] = row[parameter];
-							});
+						notificationParamsColumns.forEach(parameter => {
+							customParams[parameter] = row[parameter];
+						});
 
-							return customParams;
-						})
-						.slice(startIndex, endIndex);
+						return customParams;
+					});
 				}
 
 				tmpQuery.range = {
-					fromLine: startIndex + 1,
-					toLine: startIndex + tmpQuery.data.notificationParams.length
+					fromRecord: startIndex + 1,
+					toRecord: endIndex
 				};
 
 				queriesArray.push(tmpQuery);
 
 				startIndex = endIndex;
-				endIndex += maxDeliveries;
+				endIndex = Math.min(records.length, startIndex + maxTargets);
 			}
 		})
 		.then(() => sftp.end());
