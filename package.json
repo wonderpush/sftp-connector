@@ -17,7 +17,5 @@
     "ssh2-sftp-client": "^7.1.0"
   },
   "type": "module",
-  "devDependencies": {
-    "env-cmd": "^10.1.0"
-  }
+  "devDependencies": {}
 }
