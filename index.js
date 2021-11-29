@@ -1,15 +1,15 @@
 // ASSETS
-import logs from "./assets/logs.js";
+import logs from "./logs.js";
 
 // DEPENDENCIES
 import fs from "fs";
 import Client from "ssh2-sftp-client";
 
 // HELPERS
-import log from "./helpers/log.js";
-import getFilesList from "./helpers/getFilesList.js";
-import parseDataFromCsv from "./helpers/parseDataFromCsv.js";
-import postQuery from "./helpers/postQuery.js";
+import log from "./log.js";
+import getFilesList from "./getFilesList.js";
+import parseDataFromCsv from "./parseDataFromCsv.js";
+import postQuery from "./postQuery.js";
 
 let candidateFiles = {};
 let lastListing = {};
