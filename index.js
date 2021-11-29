@@ -1,5 +1,6 @@
 // DEPENDENCIES
 import fs from "fs";
+import path from "path";
 import Client from "ssh2-sftp-client";
 
 // HELPERS
@@ -72,14 +73,9 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 						delete candidateFiles[fileName];
 						log("Processing file:", fileName);
 
-						const path =
-							process.env.FTP_PATH.slice(-1) === "/"
-								? process.env.FTP_PATH + fileName.replace(/^.*[\\\/]/, "")
-								: process.env.FTP_PATH +
-								  "/" +
-								  fileName.replace(/^.*[\\\/]/, "");
+						const filePath = path.join(process.env.FTP_PATH, path.basename(fileName));
 
-						await parseDataFromCsv(sftpConfig, path).then(
+						await parseDataFromCsv(sftpConfig, filePath).then(
 							async queriesArray => {
 								if (queriesArray.length === 0) {
 									log("No valid records found in file:", fileName);
