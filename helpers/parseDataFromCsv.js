@@ -41,11 +41,16 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 					JSON.parse(process.env.CSV_PARSE_RECORD_DELIMITER || "[]"),
 				skip_empty_lines:
 					JSON.parse(process.env.CSV_PARSE_SKIP_EMPTY_LINES || "true"),
+			}).filter(record => {
+				// Ignoring a malformed record
+				return typeof record[userIdLabel] === "string"
+					&& typeof record[campaignIdLabel] === "string";
 			});
 
 			/* Delete temporary directory */
 			fs.rmdirSync(tmpDir, { recursive: true });
 
+			if (records.length === 0) return;
 
 			const notificationParamsColumns = Object.keys(records[0]).filter(
 				column => {

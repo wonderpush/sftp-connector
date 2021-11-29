@@ -84,6 +84,9 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 
 						await parseDataFromCsv(sftpConfig, path).then(
 							async queriesArray => {
+								if (queriesArray.length === 0) {
+									log(logs.noValidRecordsInfo, fileName);
+								}
 								for (const query of queriesArray) {
 									await postQuery(process.env.WP_ENDPOINT, query, fileName);
 								}
