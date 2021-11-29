@@ -23,6 +23,7 @@ const sftpConfig = {
 getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 	log("SFTP connection established");
 
+	log("Initial file list collected");
 	lastListing = { ...newListing };
 
 	setInterval(() => {
@@ -68,26 +69,37 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 			.then(async () => {
 				const staleFileChecks = Number(process.env.STALE_FILE_CHECKS || '1');
 
-				for (const fileName of Object.keys(candidateFiles)) {
+				// Determine files to process before starting processing,
+				// so that the candidate files don't change under our feet.
+				const filesToProcess = Object.keys(candidateFiles).filter(fileName => {
 					if (candidateFiles[fileName] === staleFileChecks) {
 						delete candidateFiles[fileName];
-						log("Processing file:", fileName);
-
-						const filePath = path.join(process.env.FTP_PATH, path.basename(fileName));
-
-						await parseDataFromCsv(sftpConfig, filePath).then(
-							async queriesArray => {
-								if (queriesArray.length === 0) {
-									log("No valid records found in file:", fileName);
-								}
-								for (const query of queriesArray) {
-									await postQuery(process.env.WP_ENDPOINT, query, fileName);
-								}
-							}
-						);
-
-						log("File processed:", fileName);
+						return true;
 					}
+					return false;
+				});
+
+				if (filesToProcess.length > 1) {
+					log("Multiple files to process, working sequentially:", filesToProcess.join(', '));
+				}
+
+				for (const fileName of filesToProcess) {
+					log("Processing file:", fileName);
+
+					const filePath = path.join(process.env.FTP_PATH, path.basename(fileName));
+
+					await parseDataFromCsv(sftpConfig, filePath).then(
+						async queriesArray => {
+							if (queriesArray.length === 0) {
+								log("No valid records found in file:", fileName);
+							}
+							for (const query of queriesArray) {
+								await postQuery(process.env.WP_ENDPOINT, query, fileName);
+							}
+						}
+					);
+
+					log("File processed:", fileName);
 				}
 			})
 			.catch(error => log(error));
