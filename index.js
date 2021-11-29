@@ -1,6 +1,3 @@
-// ASSETS
-import logs from "./logs.js";
-
 // DEPENDENCIES
 import fs from "fs";
 import Client from "ssh2-sftp-client";
@@ -23,7 +20,7 @@ const sftpConfig = {
 };
 
 getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
-	log(logs.sshConnectedInfo);
+	log("SFTP connection established");
 
 	lastListing = { ...newListing };
 
@@ -36,7 +33,7 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 					if (!Object.keys(lastListing).includes(fileName)) {
 						candidateFiles[fileName] = 0;
 
-						log(logs.newFileInfo, fileName);
+						log("New file detected, monitoring changes:", fileName);
 					}
 				});
 
@@ -45,7 +42,7 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 					if (!Object.keys(newListing).includes(fileName)) {
 						delete candidateFiles[fileName];
 
-						log(logs.fileDeletedInfo, fileName);
+						log("File deletion detected:", fileName);
 					}
 				});
 
@@ -73,7 +70,7 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 				Object.keys(candidateFiles).forEach(async fileName => {
 					if (candidateFiles[fileName] === staleFileChecks) {
 						delete candidateFiles[fileName];
-						log(logs.startFileProcessInfo, fileName);
+						log("Processing file:", fileName);
 
 						const path =
 							process.env.FTP_PATH.slice(-1) === "/"
@@ -85,13 +82,15 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 						await parseDataFromCsv(sftpConfig, path).then(
 							async queriesArray => {
 								if (queriesArray.length === 0) {
-									log(logs.noValidRecordsInfo, fileName);
+									log("No valid records found in file:", fileName);
 								}
 								for (const query of queriesArray) {
 									await postQuery(process.env.WP_ENDPOINT, query, fileName);
 								}
 							}
 						);
+
+						log("File processed:", fileName);
 					}
 				});
 			})
