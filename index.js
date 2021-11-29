@@ -67,7 +67,7 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 			.then(async () => {
 				const staleFileChecks = Number(process.env.STALE_FILE_CHECKS || '1');
 
-				Object.keys(candidateFiles).forEach(async fileName => {
+				for (const fileName of Object.keys(candidateFiles)) {
 					if (candidateFiles[fileName] === staleFileChecks) {
 						delete candidateFiles[fileName];
 						log("Processing file:", fileName);
@@ -92,7 +92,7 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 
 						log("File processed:", fileName);
 					}
-				});
+				}
 			})
 			.catch(error => log(error));
 	}, process.env.LISTING_INTERVAL_MS);
