@@ -72,6 +72,7 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 
 				Object.keys(candidateFiles).forEach(async fileName => {
 					if (candidateFiles[fileName] === staleFileChecks) {
+						delete candidateFiles[fileName];
 						log(logs.startFileProcessInfo, fileName);
 
 						const path =
