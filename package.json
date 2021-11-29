@@ -1,15 +1,33 @@
 {
-  "name": "sftp-deliveries-wonderpush",
-  "version": "1.0.0",
-  "description": "",
+  "name": "sftp-deliveries",
+  "version": "0.1.0",
+  "description": "Connect your SFTP to the WonderPush API",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "env-cmd -f ./.env node --experimental-json-modules index.js",
-    "dev": "env-cmd -f ./.env.dev npx nodemon --experimental-json-modules index.js"
+    "start": "node --experimental-modules index.js"
   },
-  "keywords": [],
-  "author": "Emmanuel SARPEDON",
+  "keywords": [
+    "wonderpush",
+    "sftp",
+    "connector",
+    "api",
+    "push",
+    "notification",
+    "notifications",
+    "push notification",
+    "push notifications"
+  ],
+  "author": {
+    "name": "WonderPush",
+    "email": "dev@wonderpush.com",
+    "url": "https://www.wonderpush.com/"
+  },
+  "contributors": [
+    {
+      "name": "Emmanuel Sarpedon",
+      "url": "https://github.com/emmanuel-sarpedon"
+    }
+  ],
   "license": "ISC",
   "dependencies": {
     "axios": "^0.24.0",
