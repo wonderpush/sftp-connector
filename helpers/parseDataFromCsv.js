@@ -7,6 +7,10 @@ import { parse } from "csv-parse/sync";
 
 // HELPERS
 
+const userIdLabel = process.env.CSV_COLUMN_USER_ID || "user_id";
+const campaignIdLabel =
+	process.env.CSV_COLUMN_CAMPAIGN_ID || "campaign_id";
+
 const parseDataFromCsv = async (sftpConfig, remotePath) => {
 	const sftp = new Client();
 
@@ -27,24 +31,21 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 
 			/* Parsing csv file */
 			const records = parse(input, {
-				columns: JSON.parse(process.env.CSV_PARSE_COLUMNS) || true,
+				columns: JSON.parse(process.env.CSV_PARSE_COLUMNS || "true"),
 				comment: process.env.CSV_PARSE_COMMENT || "",
 				delimiter: process.env.CSV_PARSE_DELIMETER || ",",
 				encoding: process.env.CSV_PARSE_ENCODING || "utf8",
 				escape: process.env.CSV_PARSE_ESCAPE || '"',
 				quote: process.env.CSV_PARSE_QUOTE || '"',
 				record_delimiter:
-					JSON.parse(process.env.CSV_PARSE_RECORD_DELIMITER) || [],
+					JSON.parse(process.env.CSV_PARSE_RECORD_DELIMITER || "[]"),
 				skip_empty_lines:
-					JSON.parse(process.env.CSV_PARSE_SKIP_EMPTY_LINES) || true
+					JSON.parse(process.env.CSV_PARSE_SKIP_EMPTY_LINES || "true"),
 			});
 
 			/* Delete temporary directory */
 			fs.rmdirSync(tmpDir, { recursive: true });
 
-			const userIdLabel = process.env.CSV_COLUMN_USER_ID || "user_id";
-			const campaignIdLabel =
-				process.env.CSV_COLUMN_CAMPAIGN_ID || "campaign_id";
 
 			const notificationParamsColumns = Object.keys(records[0]).filter(
 				column => {
