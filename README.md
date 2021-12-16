@@ -25,6 +25,9 @@ Here is how the CSV file must contain:
 yarn install
 
 # Prepare your environment with mandatory variables
+export WP_ACCESS_TOKEN=…
+export SFTP_HOST=…
+export SFTP_PRIVATE_KEY_FILE=…
 
 yarn run start
 ```
@@ -33,15 +36,19 @@ yarn run start
 
 The program uses environment variables exclusively.
 
+**WonderPush**
+
 * `WP_ACCESS_TOKEN`: **Mandatory.**
 
   Your WonderPush project's access token.
 
   Find it in the [_Settings / API credentials_](https://dashboard.wonderpush.com/applications/-/api-credentials) page.
 
-* `WP_ENDPOINT`: _Optional, default: `https://management-api.wonderpush.com/v1/deliveries`.
+* `WP_ENDPOINT`: _Optional, default: `https://management-api.wonderpush.com/v1/deliveries`._
 
   The WonderPush Management API endpoint used to trigger notification deliveries.
+
+**SFTP connection**
 
 * `SFTP_HOST`: **Mandatory.**
 
@@ -73,6 +80,8 @@ The program uses environment variables exclusively.
 
   The path to monitor for new files.
 
+**File monitoring**
+
 * `LISTING_INTERVAL_MS`: _Optional, default: `60000`, one minute._
 
   The interval at which the SFTP path is checked for new files, or files are checked for modifications.
@@ -80,6 +89,18 @@ The program uses environment variables exclusively.
 * `STALE_FILE_CHECKS`: _Optional, default: `1`._
 
   How many additional checks to perform once a new file is seen, to ensure the file has finished uploading, is free of modifications and ready for processing.
+
+**CSV configuration**
+
+* `CSV_COLUMN_USER_ID`: _Optional, default: `user_id`._
+
+  The name of the CSV column that contains the userId to send a notification to.
+
+* `CSV_COLUMN_CAMPAIGN_ID`: _Optional, default: `campaign_id`._
+
+  The name of the CSV column that contains the campaignId used to send a notification.
+
+**CSV parsing**
 
 * `CSV_PARSE_COLUMNS`: _Optional, default: `true`._
   **Must be valid JSON.**
@@ -143,12 +164,3 @@ The program uses environment variables exclusively.
   Whether to skip empty lines in the CSV file or to treat them as a valid record.
 
   See: https://csv.js.org/parse/options/skip_empty_lines/
-
-* `CSV_COLUMN_USER_ID`: _Optional, default: `user_id`.
-
-  The name of the CSV column that contains the userId to send a notification to.
-
-* `CSV_COLUMN_CAMPAIGN_ID`: _Optional, default: `campaign_id`.
-
-  The name of the CSV column that contains the campaignId used to send a notification.
-
