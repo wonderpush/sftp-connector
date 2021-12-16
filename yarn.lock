@@ -103,9 +103,9 @@ safer-buffer@~2.1.0:
   integrity sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==
 
 ssh2-sftp-client@^7.1.0:
-  version "7.1.0"
-  resolved "https://registry.yarnpkg.com/ssh2-sftp-client/-/ssh2-sftp-client-7.1.0.tgz#1a717b6818dfcae6c7c4eb1b0fd8580dd701502b"
-  integrity sha512-RyeBnutDAbIwmQrGO+MafKuXHkg2F6AMrdZtB7fbQdGm2c8AhPEY6hMwc41DKJlNtDcQCr2vaZlrBriu6xC5PA==
+  version "7.2.0"
+  resolved "https://registry.yarnpkg.com/ssh2-sftp-client/-/ssh2-sftp-client-7.2.0.tgz#819792dcb288f09424c6bf840988125ba39c3ab8"
+  integrity sha512-h850dHBeLuKfL9uTQ7y11p8QA687Sr057+Q1paB7dMuO4GDtNwxj/CPwJmvIM5BCzEuNrWf9CnMnIdC23TxzcA==
   dependencies:
     concat-stream "^2.0.0"
     promise-retry "^2.0.1"
