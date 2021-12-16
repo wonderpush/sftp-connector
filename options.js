@@ -13,6 +13,7 @@ if (!process.env.SFTP_PRIVATE_KEY && !process.env.SFTP_PRIVATE_KEY_FILE) {
 	throw new Error('Missing SFTP_PRIVATE_KEY or SFTP_PRIVATE_KEY_FILE environment variable');
 }
 const SFTP_PRIVATE_KEY = process.env.SFTP_PRIVATE_KEY || fs.readFileSync(process.env.SFTP_PRIVATE_KEY_FILE);
+const SFTP_PASSPHRASE = process.env.SFTP_PASSPHRASE;
 const SFTP_PATH = process.env.SFTP_PATH || '/';
 
 const LISTING_INTERVAL_MS = parseInt(process.env.LISTING_INTERVAL_MS || '60000');
@@ -61,6 +62,7 @@ const options = {
 	SFTP_PORT,
 	SFTP_USER,
 	SFTP_PRIVATE_KEY,
+	SFTP_PASSPHRASE,
 	SFTP_PATH,
 	LISTING_INTERVAL_MS,
 	STALE_FILE_CHECKS,

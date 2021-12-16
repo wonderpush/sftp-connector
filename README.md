@@ -76,6 +76,10 @@ The program uses environment variables exclusively.
 
   Used as only if `SFTP_PRIVATE_KEY` is omitted.
 
+* `SFTP_PASSPHRASE`: _Optional, default is none._
+
+  The passphrase of the SSH private key to use during SFTP authentication.
+
 * `SFTP_PATH`: _Optional, default: `/`._
 
   The path to monitor for new files.

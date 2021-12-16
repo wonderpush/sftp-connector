@@ -18,6 +18,7 @@ const sftpConfig = {
 	port: options.SFTP_PORT,
 	username: options.SFTP_USER,
 	privateKey: options.SFTP_PRIVATE_KEY,
+	passphrase: options.SFTP_PASSPHRASE,
 };
 
 getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(newListing => {
