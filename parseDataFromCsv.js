@@ -43,7 +43,7 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 			});
 
 			/* Delete temporary directory */
-			fs.rmdirSync(tmpDir, { recursive: true });
+			fs.rmSync(tmpDir, { recursive: true });
 
 			if (records.length === 0) return;
 
