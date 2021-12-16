@@ -39,8 +39,8 @@ const CSV_PARSE_COLUMNS = tryJsonParse(process.env.CSV_PARSE_COLUMNS || 'true', 
 const CSV_PARSE_COMMENT = tryJsonParse(process.env.CSV_PARSE_COMMENT || '""', new Error('Bad CSV_PARSE_COMMENT environment variable, should be JSON-encoded'));
 const CSV_PARSE_DELIMITER = tryJsonParse(process.env.CSV_PARSE_DELIMITER || '","', new Error('Bad CSV_PARSE_DELIMITER environment variable, should be JSON-encoded'));
 const CSV_PARSE_ENCODING = tryJsonParse(process.env.CSV_PARSE_ENCODING || '"utf8"', new Error('Bad CSV_PARSE_ENCODING environment variable, should be JSON-encoded'));
-const CSV_PARSE_ESCAPE = tryJsonParse(process.env.CSV_PARSE_ESCAPE || '"\""', new Error('Bad CSV_PARSE_ESCAPE environment variable, should be JSON-encoded'));
-const CSV_PARSE_QUOTE = tryJsonParse(process.env.CSV_PARSE_QUOTE || '"\""', new Error('Bad CSV_PARSE_QUOTE environment variable, should be JSON-encoded'));
+const CSV_PARSE_ESCAPE = tryJsonParse(process.env.CSV_PARSE_ESCAPE || '"\\""', new Error('Bad CSV_PARSE_ESCAPE environment variable, should be JSON-encoded'));
+const CSV_PARSE_QUOTE = tryJsonParse(process.env.CSV_PARSE_QUOTE || '"\\""', new Error('Bad CSV_PARSE_QUOTE environment variable, should be JSON-encoded'));
 const CSV_PARSE_RECORD_DELIMITER = tryJsonParse(process.env.CSV_PARSE_RECORD_DELIMITER || '[]', new Error('Bad CSV_PARSE_RECORD_DELIMITER environment variable, should be JSON-encoded'));
 const CSV_PARSE_SKIP_EMPTY_LINES = tryJsonParse(process.env.CSV_PARSE_SKIP_EMPTY_LINES || 'true', new Error('Bad CSV_PARSE_SKIP_EMPTY_LINES environment variable, should be JSON-encoded'));
 
