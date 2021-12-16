@@ -22,14 +22,14 @@ Here is how the CSV file must contain:
 ## Usage
 
 ```
-yarn install
+npm install
 
 # Prepare your environment with mandatory variables
 export WP_ACCESS_TOKEN=…
 export SFTP_HOST=…
 export SFTP_PRIVATE_KEY_FILE=…
 
-yarn run start
+npm run start
 ```
 
 ## Configuration
