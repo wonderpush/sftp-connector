@@ -14,20 +14,20 @@ let lastListing = {};
 
 const sftp = new Client();
 const sftpConfig = {
-	host: options.FTP_HOST,
-	port: options.FTP_PORT,
-	username: options.FTP_USER,
-	privateKey: options.FTP_PRIVATE_KEY,
+	host: options.SFTP_HOST,
+	port: options.SFTP_PORT,
+	username: options.SFTP_USER,
+	privateKey: options.SFTP_PRIVATE_KEY,
 };
 
-getFilesList(sftp, sftpConfig, options.FTP_PATH).then(newListing => {
+getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(newListing => {
 	log("SFTP connection established");
 
 	log("Initial file list collected");
 	lastListing = { ...newListing };
 
 	setInterval(() => {
-		getFilesList(sftp, sftpConfig, options.FTP_PATH)
+		getFilesList(sftp, sftpConfig, options.SFTP_PATH)
 			// ! FILE SELECTION
 			.then(newListing => {
 				// to check new files
@@ -86,7 +86,7 @@ getFilesList(sftp, sftpConfig, options.FTP_PATH).then(newListing => {
 				for (const fileName of filesToProcess) {
 					log("Processing file:", fileName);
 
-					const filePath = path.join(options.FTP_PATH, path.basename(fileName));
+					const filePath = path.join(options.SFTP_PATH, path.basename(fileName));
 
 					await parseDataFromCsv(sftpConfig, filePath).then(
 						async queriesArray => {

@@ -1,19 +1,19 @@
 import fs from "fs";
 
-const FTP_HOST = process.env.FTP_HOST;
-if (!FTP_HOST) {
-	throw new Error('Missing or bad FTP_HOST environment variable');
+const SFTP_HOST = process.env.SFTP_HOST;
+if (!SFTP_HOST) {
+	throw new Error('Missing or bad SFTP_HOST environment variable');
 }
-const FTP_PORT = parseInt(process.env.FTP_PORT || '22');
-if (isNaN(FTP_PORT) || FTP_PORT <= 0) {
-	throw new Error('Bad FTP_PORT environment variable');
+const SFTP_PORT = parseInt(process.env.SFTP_PORT || '22');
+if (isNaN(SFTP_PORT) || SFTP_PORT <= 0) {
+	throw new Error('Bad SFTP_PORT environment variable');
 }
-const FTP_USER = process.env.FTP_USER || ''; // '' represents anonymous
-if (!process.env.FTP_PRIVATE_KEY && !process.env.FTP_PRIVATE_KEY_FILE) {
-	throw new Error('Missing FTP_PRIVATE_KEY or FTP_PRIVATE_KEY_FILE environment variable');
+const SFTP_USER = process.env.SFTP_USER || ''; // '' represents anonymous
+if (!process.env.SFTP_PRIVATE_KEY && !process.env.SFTP_PRIVATE_KEY_FILE) {
+	throw new Error('Missing SFTP_PRIVATE_KEY or SFTP_PRIVATE_KEY_FILE environment variable');
 }
-const FTP_PRIVATE_KEY = process.env.FTP_PRIVATE_KEY || fs.readFileSync(process.env.FTP_PRIVATE_KEY_FILE);
-const FTP_PATH = process.env.FTP_PATH || '/';
+const SFTP_PRIVATE_KEY = process.env.SFTP_PRIVATE_KEY || fs.readFileSync(process.env.SFTP_PRIVATE_KEY_FILE);
+const SFTP_PATH = process.env.SFTP_PATH || '/';
 
 const LISTING_INTERVAL_MS = parseInt(process.env.LISTING_INTERVAL_MS || '60000');
 if (isNaN(LISTING_INTERVAL_MS) || LISTING_INTERVAL_MS <= 0) {
@@ -57,11 +57,11 @@ if (isNaN(WP_MAXIMUM_DELIVERIES_TARGETS) || WP_MAXIMUM_DELIVERIES_TARGETS <= 0) 
 }
 
 const options = {
-	FTP_HOST,
-	FTP_PORT,
-	FTP_USER,
-	FTP_PRIVATE_KEY,
-	FTP_PATH,
+	SFTP_HOST,
+	SFTP_PORT,
+	SFTP_USER,
+	SFTP_PRIVATE_KEY,
+	SFTP_PATH,
 	LISTING_INTERVAL_MS,
 	STALE_FILE_CHECKS,
 	CSV_PARSE_COLUMNS,
