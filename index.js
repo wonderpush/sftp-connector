@@ -1,9 +1,9 @@
 // DEPENDENCIES
-import fs from "fs";
 import path from "path";
 import Client from "ssh2-sftp-client";
 
 // HELPERS
+import options from "./options.js";
 import log from "./log.js";
 import getFilesList from "./getFilesList.js";
 import parseDataFromCsv from "./parseDataFromCsv.js";
@@ -14,20 +14,20 @@ let lastListing = {};
 
 const sftp = new Client();
 const sftpConfig = {
-	host: process.env.FTP_HOST,
-	port: process.env.FTP_PORT,
-	username: process.env.FTP_USER,
-	privateKey: fs.readFileSync(process.env.FTP_PRIVATE_KEY)
+	host: options.FTP_HOST,
+	port: options.FTP_PORT,
+	username: options.FTP_USER,
+	privateKey: options.FTP_PRIVATE_KEY,
 };
 
-getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
+getFilesList(sftp, sftpConfig, options.FTP_PATH).then(newListing => {
 	log("SFTP connection established");
 
 	log("Initial file list collected");
 	lastListing = { ...newListing };
 
 	setInterval(() => {
-		getFilesList(sftp, sftpConfig, process.env.FTP_PATH)
+		getFilesList(sftp, sftpConfig, options.FTP_PATH)
 			// ! FILE SELECTION
 			.then(newListing => {
 				// to check new files
@@ -67,7 +67,7 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 			})
 			// ! FILE PROCESSING
 			.then(async () => {
-				const staleFileChecks = Number(process.env.STALE_FILE_CHECKS || '1');
+				const staleFileChecks = Number(options.STALE_FILE_CHECKS || '1');
 
 				// Determine files to process before starting processing,
 				// so that the candidate files don't change under our feet.
@@ -86,7 +86,7 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 				for (const fileName of filesToProcess) {
 					log("Processing file:", fileName);
 
-					const filePath = path.join(process.env.FTP_PATH, path.basename(fileName));
+					const filePath = path.join(options.FTP_PATH, path.basename(fileName));
 
 					await parseDataFromCsv(sftpConfig, filePath).then(
 						async queriesArray => {
@@ -94,7 +94,7 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 								log("No valid records found in file:", fileName);
 							}
 							for (const query of queriesArray) {
-								await postQuery(process.env.WP_ENDPOINT, query, fileName);
+								await postQuery(options.WP_ENDPOINT, query, fileName);
 							}
 						}
 					);
@@ -103,5 +103,5 @@ getFilesList(sftp, sftpConfig, process.env.FTP_PATH).then(newListing => {
 				}
 			})
 			.catch(error => log(error));
-	}, process.env.LISTING_INTERVAL_MS);
+	}, options.LISTING_INTERVAL_MS);
 });

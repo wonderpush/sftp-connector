@@ -4,12 +4,9 @@ import fs from "fs";
 import * as path from "path";
 import os from "os";
 import { parse } from "csv-parse/sync";
+import options from "./options.js";
 
 // HELPERS
-
-const userIdLabel = process.env.CSV_COLUMN_USER_ID || "user_id";
-const campaignIdLabel =
-	process.env.CSV_COLUMN_CAMPAIGN_ID || "campaign_id";
 
 const parseDataFromCsv = async (sftpConfig, remotePath) => {
 	const sftp = new Client();
@@ -31,20 +28,18 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 
 			/* Parsing csv file */
 			const records = parse(input, {
-				columns: JSON.parse(process.env.CSV_PARSE_COLUMNS || "true"),
-				comment: process.env.CSV_PARSE_COMMENT || "",
-				delimiter: process.env.CSV_PARSE_DELIMETER || ",",
-				encoding: process.env.CSV_PARSE_ENCODING || "utf8",
-				escape: process.env.CSV_PARSE_ESCAPE || '"',
-				quote: process.env.CSV_PARSE_QUOTE || '"',
-				record_delimiter:
-					JSON.parse(process.env.CSV_PARSE_RECORD_DELIMITER || "[]"),
-				skip_empty_lines:
-					JSON.parse(process.env.CSV_PARSE_SKIP_EMPTY_LINES || "true"),
+				columns: options.CSV_PARSE_COLUMNS,
+				comment: options.CSV_PARSE_COMMENT,
+				delimiter: options.CSV_PARSE_DELIMITER,
+				encoding: options.CSV_PARSE_ENCODING,
+				escape: options.CSV_PARSE_ESCAPE,
+				quote: options.CSV_PARSE_QUOTE,
+				record_delimiter: options.CSV_PARSE_RECORD_DELIMITER,
+				skip_empty_lines: options.CSV_PARSE_SKIP_EMPTY_LINES,
 			}).filter(record => {
 				// Ignoring a malformed record
-				return typeof record[userIdLabel] === "string"
-					&& typeof record[campaignIdLabel] === "string";
+				return typeof record[options.CSV_COLUMN_USER_ID] === "string"
+					&& typeof record[options.CSV_COLUMN_CAMPAIGN_ID] === "string";
 			});
 
 			/* Delete temporary directory */
@@ -54,13 +49,13 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 
 			const notificationParamsColumns = Object.keys(records[0]).filter(
 				column => {
-					return column !== userIdLabel && column !== campaignIdLabel;
+					return column !== options.CSV_COLUMN_USER_ID && column !== options.CSV_COLUMN_CAMPAIGN_ID;
 				}
 			);
 
 			/* Create queries */
 			const maxTargets =
-				Number(process.env.WP_MAXIMUM_DELIVERIES_TARGETS) || 10000;
+				Number(options.WP_MAXIMUM_DELIVERIES_TARGETS) || 10000;
 
 			const numberOfQueries = Math.ceil(records.length / maxTargets);
 
@@ -81,12 +76,12 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 					range: {}
 				};
 
-				tmpQuery.data.accessToken = process.env.WP_ACCESS_TOKEN;
+				tmpQuery.data.accessToken = options.WP_ACCESS_TOKEN;
 				tmpQuery.data.targetUserIds = queryRecords.map(
-					item => item[userIdLabel]
+					item => item[options.CSV_COLUMN_USER_ID]
 				);
 
-				tmpQuery.data.campaignId = records[0][campaignIdLabel];
+				tmpQuery.data.campaignId = records[0][options.CSV_COLUMN_CAMPAIGN_ID];
 
 				if (notificationParamsColumns) {
 					tmpQuery.data.notificationParams = queryRecords.map(row => {
