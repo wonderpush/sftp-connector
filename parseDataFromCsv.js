@@ -12,7 +12,7 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 	const sftp = new Client();
 
 	// temporary file
-	let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wonderpush-sftp-deliveries-"));
+	let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wonderpush-sftp-connector-"));
 	let tmpFile = tmpDir + "/" + remotePath.split("/").pop();
 
 	const queriesArray = [];

@@ -1,4 +1,4 @@
-# SFTP deliveries WonderPush connector
+# SFTP WonderPush connector
 
 [WonderPush](https://www.wonderpush.com) is a fast and affordable push notifications service. [Get started in minutes](https://dashboard.wonderpush.com/account/signup).
 
@@ -55,10 +55,10 @@ npm run start
 
 ```
 # Build the image once
-docker build . -t wonderpush/sftp-deliveries
+docker build . -t wonderpush/sftp-connector
 
 # Run the image
-docker run -ti --init --env WP_ACCESS_TOKEN=… --env SFTP_HOST=… --env SFTP_PRIVATE_KEY="$(cat …)" wonderpush/sftp-deliveries@latest
+docker run -ti --init --env WP_ACCESS_TOKEN=… --env SFTP_HOST=… --env SFTP_PRIVATE_KEY="$(cat …)" wonderpush/sftp-connector@latest
 ```
 
 The `--init` option is necessary for NodeJS to handle interrupt signals and quit properly.
