@@ -9,16 +9,21 @@ It can be used to deliver millions of personalized push notifications to an audi
 
 Here is how it works:
 
-1. This program monitors an SFTP server for new CSV files.
-2. Once a new CSV file is no longer modified, the program downloads it locally.
-3. The downloaded file is read and split into blocks of many lines.
-4. Each block results in an API call to the [`POST /v1/deliveries` endpoint](https://docs.wonderpush.com/reference/post-deliveries).
+1. This program monitors an SFTP server for new files in a given folder.
+2. It starts by listing all existing files to avoid processing them again in the case the program is restarted.
+3. Once a new file is no longer modified, the program downloads it locally.
+4. The downloaded file is read as a CSV and split into blocks of many records.
+5. Each block results in an API call to the [`POST /v1/deliveries` endpoint](https://docs.wonderpush.com/reference/post-deliveries).
+6. When a file is deleted, the program forgets it. If an existing file is modified, the program ignores it.
+7. Due to the way the network calls are made idempotent for making retries safe against duplicate work,
+   if a previously existing file is deleted and re-added within 7 days, notifications will not be redelivered despite
+   new network calls being made, especially if the file was restored with its previous content.
 
-Here is how the CSV file must contain:
+Here is what the CSV file must contain:
 
 * It must have a column representing the userId to send a notification to, named `user_id` by default.
 * It must have a column representing the campaignId to use for fetching the content, named `campaign_id` by default.
-* Each line of a CSV file must use the same campaignId.
+* Each record within a CSV file must use the same campaignId. In practice, only the campaignId of the first record is read.
 * Any additional columns are treated as notification parameter of the same name, for personalizing the notification.
 
 ## Usage
@@ -73,6 +78,21 @@ The program uses environment variables exclusively.
 * `WP_ENDPOINT`: _Optional, default: `https://management-api.wonderpush.com/v1/deliveries`._
 
   The WonderPush Management API endpoint used to trigger notification deliveries.
+
+* `WP_IDEMPOTENCY_KEY_PREFIX`: _Optional, default: `sftp-`._
+
+  The prefix of the [idempotency keys](https://docs.wonderpush.com/reference/idempotency-keys).
+  This permits safely retrying failed network calls, ensuring that no notifications end up being sent twice because of a retry.
+
+  Only strings consisting of up to 38 alphanumeric characters, dashes or underscores are accepted.
+
+* `WP_RETRIES_MAX`: _Optional, default: `2`._
+
+  How many times to retry a failed network call.
+
+* `WP_TIMEOUT_MS`: _Optional, default: `30000`._
+
+  How long to wait for a network call's response.
 
 **SFTP connection**
 

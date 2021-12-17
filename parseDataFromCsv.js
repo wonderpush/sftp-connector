@@ -73,7 +73,8 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 						campaignId: "",
 						notificationParams: []
 					},
-					range: {}
+					range: {},
+					remotePath,
 				};
 
 				tmpQuery.data.accessToken = options.WP_ACCESS_TOKEN;
