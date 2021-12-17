@@ -21,7 +21,18 @@ Here is how the CSV file must contain:
 
 ## Usage
 
+First, you'll have to clone this repository:
+
 ```
+git clone https://github.com/wonderpush/sftp-connector.git
+git checkout latest
+cd sftp-connector
+```
+
+### Run using the command line
+
+```
+# Install the dependencies
 npm install
 
 # Prepare your environment with mandatory variables
@@ -29,8 +40,21 @@ export WP_ACCESS_TOKEN=…
 export SFTP_HOST=…
 export SFTP_PRIVATE_KEY_FILE=…
 
+# Run the program
 npm run start
 ```
+
+### Run using Docker
+
+```
+# Build the image once
+docker build . -t wonderpush/sftp-deliveries
+
+# Run the image
+docker run -ti --init --env WP_ACCESS_TOKEN=… --env SFTP_HOST=… --env SFTP_PRIVATE_KEY="$(cat …)" wonderpush/sftp-deliveries@latest
+```
+
+The `--init` option is necessary for NodeJS to handle interrupt signals and quit properly.
 
 ## Configuration
 
