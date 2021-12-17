@@ -1,5 +1,7 @@
 # SFTP deliveries WonderPush connector
 
+[WonderPush](https://www.wonderpush.com) is a fast and affordable push notifications service. [Get started in minutes](https://dashboard.wonderpush.com/account/signup).
+
 **Connect your SFTP to the WonderPush API.**
 
 This programs watches for new CSV files and triggers notification deliveries for your WonderPush project.
@@ -192,3 +194,17 @@ The program uses environment variables exclusively.
   Whether to skip empty lines in the CSV file or to treat them as a valid record.
 
   See: https://csv.js.org/parse/options/skip_empty_lines/
+
+## Changelog and releases
+
+See the [**releases page**](https://github.com/wonderpush/sftp-connector/releases) on GitHub.
+
+Follow our [**announcements**](https://discuss.wonderpush.com/c/announcements) on our documentation.
+
+## Support
+
+Contact support using the **live chat** on your [dashboard](https://dashboard.wonderpush.com/).
+
+Ask for help on [**StackOverflow**](https://stackoverflow.com/questions/tagged/wonderpush).
+
+Report a bug, file a feature request or send a pull request in the [**issue tracker**](https://github.com/wonderpush/sftp-connector/issues).
