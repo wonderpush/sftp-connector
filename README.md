@@ -32,8 +32,8 @@ First, you'll have to clone this repository:
 
 ```
 git clone https://github.com/wonderpush/sftp-connector.git
-git checkout latest
 cd sftp-connector
+git checkout latest
 ```
 
 ### Run using the command line
