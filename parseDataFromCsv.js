@@ -24,7 +24,11 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 		})
 		.then(() => {
 			/* Store tmp file */
-			const input = fs.readFileSync(tmpFile);
+			let input = fs.readFileSync(tmpFile);
+			/* Skip BOM */
+			if (input.toString('utf8', 0, 3).charCodeAt(0) === 65279) {
+				input = input.slice(3);
+			}
 
 			/* Parsing csv file */
 			const records = parse(input, {
