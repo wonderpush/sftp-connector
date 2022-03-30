@@ -1,5 +1,4 @@
 // DEPENDENCIES
-import Client from "ssh2-sftp-client";
 import fs from "fs";
 import * as path from "path";
 import os from "os";
@@ -8,20 +7,14 @@ import options from "./options.js";
 
 // HELPERS
 
-const parseDataFromCsv = async (sftpConfig, remotePath) => {
-	const sftp = new Client();
-
+const parseDataFromCsv = async (sftp, sftpConfig, remotePath) => {
 	// temporary file
 	let tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wonderpush-sftp-connector-"));
 	let tmpFile = tmpDir + "/" + remotePath.split("/").pop();
 
 	const queriesArray = [];
 
-	await sftp
-		.connect(sftpConfig)
-		.then(() => {
-			return sftp.get(remotePath, tmpFile);
-		})
+	await sftp.get(remotePath, tmpFile)
 		.then(() => {
 			/* Store tmp file */
 			let input = fs.readFileSync(tmpFile);
@@ -110,8 +103,7 @@ const parseDataFromCsv = async (sftpConfig, remotePath) => {
 				startIndex = endIndex;
 				endIndex = Math.min(records.length, startIndex + maxTargets);
 			}
-		})
-		.then(() => sftp.end());
+		});
 
 	return queriesArray;
 };

@@ -1,16 +1,7 @@
-// DEPENDENCIES
-import Client from "ssh2-sftp-client";
-
-// const sftp = new Client();
-
 const getFilesList = async (sftp, sftpConfig, path) => {
 	const newListing = {};
 
-	await sftp
-		.connect(sftpConfig)
-		.then(() => {
-			return sftp.list(path || "/");
-		})
+	await sftp.list(path || "/")
 		.then(async data => {
 
 			await data.forEach(file => {
@@ -29,9 +20,6 @@ const getFilesList = async (sftp, sftpConfig, path) => {
 					};
 				}
 			});
-
-			sftp.end();
-
 		});
 
 	return newListing;

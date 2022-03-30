@@ -19,7 +19,19 @@ const sftpConfig = {
 	username: options.SFTP_USER,
 	privateKey: options.SFTP_PRIVATE_KEY,
 	passphrase: options.SFTP_PASSPHRASE,
+
+	retries: 10,
+	retry_factor: 1.5,
+	retry_minTimeout: 2000,
 };
+
+let sftpChannel = null;
+try {
+	sftpChannel = await sftp.connect(sftpConfig);
+} catch (ex) {
+	log("Failed to connect after " + sftpConfig.retries + 1 + " tries, aborting");
+}
+// Note: Once connected, each command will have its own retry
 
 getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(newListing => {
 	log("SFTP connection established");
@@ -89,7 +101,7 @@ getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(newListing => {
 
 					const filePath = path.join(options.SFTP_PATH, path.basename(fileName));
 
-					await parseDataFromCsv(sftpConfig, filePath).then(
+					await parseDataFromCsv(sftp, sftpConfig, filePath).then(
 						async queriesArray => {
 							if (queriesArray.length === 0) {
 								log("No valid records found in file:", fileName);
