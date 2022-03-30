@@ -130,6 +130,19 @@ The program uses environment variables exclusively.
 
   The path to monitor for new files.
 
+* `SFTP_RETRIES`: _Optional, default: `1`._
+
+  How many retries to perform during the initial SFTP connection.
+  Specifying 0 means that after the initial attempt, 0 retries will be done.
+
+* `SFTP_RETRY_WAIT_MIN_MS`: _Optional, default: `1000`._
+
+  How long to wait between each retries at minimum.
+
+* `SFTP_RETRY_WAIT_FACTOR`: _Optional, default: `2`._
+
+  The exponential backoff factor to use when waiting before retrying.
+
 * `SFTP_DEBUG`: _Optional, default: `false`._
 
   Use `true` to output debugging logs from the SFTP library.

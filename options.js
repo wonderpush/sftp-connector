@@ -16,6 +16,18 @@ const SFTP_PRIVATE_KEY = process.env.SFTP_PRIVATE_KEY || fs.readFileSync(process
 const SFTP_PASSPHRASE = process.env.SFTP_PASSPHRASE;
 const SFTP_PATH = process.env.SFTP_PATH || '/';
 const SFTP_DEBUG = process.env.SFTP_DEBUG === 'true';
+const SFTP_RETRIES = parseInt(process.env.SFTP_RETRIES || '1');
+if (isNaN(SFTP_RETRIES) || SFTP_RETRIES < 0) {
+	throw new Error('Bad SFTP_RETRIES environment variable');
+}
+const SFTP_RETRY_WAIT_MIN_MS = parseInt(process.env.SFTP_RETRY_WAIT_MIN_MS || '1000');
+if (isNaN(SFTP_RETRY_WAIT_MIN_MS) || SFTP_RETRY_WAIT_MIN_MS < 0) {
+	throw new Error('Bad SFTP_RETRY_WAIT_MIN_MS environment variable');
+}
+const SFTP_RETRY_WAIT_FACTOR = parseFloat(process.env.SFTP_RETRY_WAIT_FACTOR || '2');
+if (isNaN(SFTP_RETRY_WAIT_FACTOR) || SFTP_RETRY_WAIT_FACTOR < 1) {
+	throw new Error('Bad SFTP_RETRY_WAIT_FACTOR environment variable');
+}
 
 const LISTING_INTERVAL_MS = parseInt(process.env.LISTING_INTERVAL_MS || '60000');
 if (isNaN(LISTING_INTERVAL_MS) || LISTING_INTERVAL_MS <= 0) {
@@ -80,6 +92,9 @@ const options = {
 	SFTP_PASSPHRASE,
 	SFTP_PATH,
 	SFTP_DEBUG,
+	SFTP_RETRIES,
+	SFTP_RETRY_WAIT_MIN_MS,
+	SFTP_RETRY_WAIT_FACTOR,
 	LISTING_INTERVAL_MS,
 	STALE_FILE_CHECKS,
 	CSV_PARSE_COLUMNS,

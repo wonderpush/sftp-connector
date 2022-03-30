@@ -20,10 +20,9 @@ const sftpConfig = {
 	username: options.SFTP_USER,
 	privateKey: options.SFTP_PRIVATE_KEY,
 	passphrase: options.SFTP_PASSPHRASE,
-
-	retries: 10,
-	retry_factor: 1.5,
-	retry_minTimeout: 2000,
+	retries: options.SFTP_RETRIES,
+	retry_factor: options.SFTP_RETRY_WAIT_FACTOR,
+	retry_minTimeout: options.SFTP_RETRY_WAIT_MIN_MS,
 };
 
 let sftpChannel = null;
