@@ -33,14 +33,14 @@ try {
 }
 // Note: Once connected, each command will have its own retry
 
-getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(newListing => {
+getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(async (newListing) => {
 	log("SFTP connection established");
 
 	log("Initial file list collected");
 	lastListing = { ...newListing };
 
-	setInterval(() => {
-		getFilesList(sftp, sftpConfig, options.SFTP_PATH)
+	function runOnce() {
+		return getFilesList(sftp, sftpConfig, options.SFTP_PATH)
 			// ! FILE SELECTION
 			.then(newListing => {
 				// to check new files
@@ -116,5 +116,9 @@ getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(newListing => {
 				}
 			})
 			.catch(error => log(error));
-	}, options.LISTING_INTERVAL_MS);
+	}
+	while (true) {
+		await runOnce();
+		await new Promise((res) => setTimeout(res, options.LISTING_INTERVAL_MS));
+	}
 });
