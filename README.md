@@ -130,6 +130,10 @@ The program uses environment variables exclusively.
 
   The path to monitor for new files.
 
+* `SFTP_DEBUG`: _Optional, default: `false`._
+
+  Use `true` to output debugging logs from the SFTP library.
+
 **File monitoring**
 
 * `LISTING_INTERVAL_MS`: _Optional, default: `60000`, one minute._

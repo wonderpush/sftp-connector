@@ -15,6 +15,7 @@ if (!process.env.SFTP_PRIVATE_KEY && !process.env.SFTP_PRIVATE_KEY_FILE) {
 const SFTP_PRIVATE_KEY = process.env.SFTP_PRIVATE_KEY || fs.readFileSync(process.env.SFTP_PRIVATE_KEY_FILE);
 const SFTP_PASSPHRASE = process.env.SFTP_PASSPHRASE;
 const SFTP_PATH = process.env.SFTP_PATH || '/';
+const SFTP_DEBUG = process.env.SFTP_DEBUG === 'true';
 
 const LISTING_INTERVAL_MS = parseInt(process.env.LISTING_INTERVAL_MS || '60000');
 if (isNaN(LISTING_INTERVAL_MS) || LISTING_INTERVAL_MS <= 0) {
@@ -78,6 +79,7 @@ const options = {
 	SFTP_PRIVATE_KEY,
 	SFTP_PASSPHRASE,
 	SFTP_PATH,
+	SFTP_DEBUG,
 	LISTING_INTERVAL_MS,
 	STALE_FILE_CHECKS,
 	CSV_PARSE_COLUMNS,

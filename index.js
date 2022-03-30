@@ -14,6 +14,7 @@ let lastListing = {};
 
 const sftp = new Client();
 const sftpConfig = {
+	debug: options.SFTP_DEBUG ? console.debug : undefined,
 	host: options.SFTP_HOST,
 	port: options.SFTP_PORT,
 	username: options.SFTP_USER,
