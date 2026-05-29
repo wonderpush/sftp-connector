@@ -31,9 +31,9 @@
   ],
   "license": "ISC",
   "dependencies": {
-    "axios": "0.24.0",
-    "csv-parse": "5.0.3",
-    "ssh2-sftp-client": "7.2.0"
+    "axios": "^1.16.1",
+    "csv-parse": "^6.2.1",
+    "ssh2-sftp-client": "^12.1.1"
   },
   "type": "module",
   "engines": {
