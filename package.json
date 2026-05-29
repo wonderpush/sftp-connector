@@ -5,7 +5,8 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "start:send-campaign-to-userids": "node commands/send-campaign-to-userids.js"
   },
   "keywords": [
     "wonderpush",
