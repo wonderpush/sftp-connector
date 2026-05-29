@@ -21,7 +21,7 @@ All configuration comes exclusively from environment variables, parsed and valid
 
 Single long-running loop in `index.js`:
 
-1. Connect once via `ssh2-sftp-client` (`sftp.connect`). The connection's own retry/backoff is configured via `SFTP_RETRIES`, `SFTP_RETRY_WAIT_MIN_MS`, `SFTP_RETRY_WAIT_FACTOR`.
+1. Connect once via `ssh2-sftp-client` (`sftp.connect`). Since v10 the library no longer retries on connect, so `index.js` wraps `connect()` with its own exponential backoff driven by `SFTP_RETRIES`, `SFTP_RETRY_WAIT_MIN_MS`, `SFTP_RETRY_WAIT_FACTOR`.
 2. Initial `getFilesList` populates `lastListing` so pre-existing files are NOT reprocessed on restart.
 3. Loop every `LISTING_INTERVAL_MS`:
    - Diff `newListing` vs `lastListing` to detect added/deleted/modified files. Added files enter `candidateFiles` with a counter at 0.
