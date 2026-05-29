@@ -1,4 +1,4 @@
-FROM node:16.13.1-alpine3.14
+FROM node:26.2.0-alpine3.22
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -12,6 +12,6 @@ COPY . .
 
 # Install dependencies
 RUN set -eux \
-    && npm ci --only=production
+    && npm ci --omit=dev
 
 CMD [ "node", "index.js" ]

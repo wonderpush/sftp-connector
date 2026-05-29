@@ -5,7 +5,7 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "node --experimental-modules index.js"
+    "start": "node index.js"
   },
   "keywords": [
     "wonderpush",
@@ -36,5 +36,8 @@
     "ssh2-sftp-client": "7.2.0"
   },
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {}
 }
