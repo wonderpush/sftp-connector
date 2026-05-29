@@ -43,12 +43,13 @@ function sleep(ms) {
 	});
 }
 
-const postQuery = async (url, query, file) => {
+const postQuery = async (url, query, file, idempotencyKeyPrefix) => {
 	const remotePathHash = crypto.createHash('sha1').update(query.remotePath).digest('hex').substr(-8);
 	const rangeFromHex = query.range.fromRecord.toString(16).padStart(8, '0');
 	const rangeToHex = query.range.toRecord.toString(16).padStart(8, '0');
-	const idempotencyKey = `${options.WP_IDEMPOTENCY_KEY_PREFIX}${remotePathHash}-${rangeFromHex}-${rangeToHex}`;
+	const idempotencyKey = `${idempotencyKeyPrefix}${remotePathHash}-${rangeFromHex}-${rangeToHex}`;
 
+	let lastResponse = undefined;
 	for (let tries = 0; tries <= options.WP_RETRIES_MAX; tries++) {
 		let retry = false;
 		await sleep(nextCallNoSoonerThanDate - new Date().getTime());
@@ -74,7 +75,9 @@ const postQuery = async (url, query, file) => {
 				response: response.data,
 				headers: response.headers,
 			});
+			lastResponse = response;
 		} catch (error) {
+			lastResponse = error.response;
 			const duration = new Date().getTime() - start;
 			error.response
 				? log({
@@ -136,6 +139,7 @@ const postQuery = async (url, query, file) => {
 
 		if (!retry) break;
 	}
+	return lastResponse;
 };
 
 export default postQuery;

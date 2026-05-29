@@ -122,7 +122,7 @@ getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(async (newListing) => {
 						log("No valid records found in file:", fileName);
 					}
 					for (const query of queriesArray) {
-						await postQuery(commandOptions.WP_ENDPOINT, query, fileName);
+						await postQuery(commandOptions.WP_ENDPOINT, query, fileName, commandOptions.WP_IDEMPOTENCY_KEY_PREFIX);
 					}
 
 					log("File processed:", fileName);
