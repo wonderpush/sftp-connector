@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-NodeJS daemon that watches an SFTP folder for new CSV files and triggers push notification deliveries via the WonderPush Management API (`POST /v1/deliveries`). ES modules (`"type": "module"`), Node `--experimental-modules`.
+NodeJS daemon that watches an SFTP folder for new CSV files and triggers push notification deliveries via the WonderPush Management API (`POST /v1/deliveries`). ES modules (`"type": "module"`).
 
 ## Commands
 
@@ -21,7 +21,7 @@ All configuration comes exclusively from environment variables, parsed and valid
 
 Single long-running loop in `index.js`:
 
-1. Connect once via `ssh2-sftp-client` (`sftp.connect`). Since v10 the library no longer retries on connect, so `index.js` wraps `connect()` with its own exponential backoff driven by `SFTP_RETRIES`, `SFTP_RETRY_WAIT_MIN_MS`, `SFTP_RETRY_WAIT_FACTOR`.
+1. Connect once via `ssh2-sftp-client` (`sftp.connect`), wrapped in `index.js` by an exponential backoff driven by `SFTP_RETRIES`, `SFTP_RETRY_WAIT_MIN_MS`, `SFTP_RETRY_WAIT_FACTOR`.
 2. Initial `getFilesList` populates `lastListing` so pre-existing files are NOT reprocessed on restart.
 3. Loop every `LISTING_INTERVAL_MS`:
    - Diff `newListing` vs `lastListing` to detect added/deleted/modified files. Added files enter `candidateFiles` with a counter at 0.
@@ -54,4 +54,4 @@ Retries are bounded by `WP_RETRIES_MAX` (default 2 additional attempts).
 - Hidden files (`.foo`) and non-regular entries (directories, symlinks) are skipped by `getFilesList`.
 - `parseDataFromCsv` writes to `os.tmpdir()` under a `wonderpush-sftp-connector-*` directory and removes it after parsing.
 - All CSV_PARSE_* env vars must be **valid JSON** (e.g. delimiter is `","` not `,`).
-- Releases are tagged in git and published via GitHub releases. `package.json` is marked `"private": true` and the repo has `.npmignore`/policy preventing NPM publishing (see commit `e642f5c`).
+- Releases are tagged in git and published via GitHub releases. `package.json` is marked `"private": true` to prevent NPM publishing.
