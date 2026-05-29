@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-NodeJS program providing one or more SFTP-driven subcommands that integrate with the WonderPush Management API. Today only `send-campaign-to-userids` exists; it watches an SFTP folder for new CSV files and triggers push notification deliveries (`POST /v1/deliveries`). ES modules (`"type": "module"`).
+NodeJS program providing one or more SFTP-driven subcommands that integrate with the WonderPush Management API. Two subcommands today, both sharing the SFTP polling and CSV parsing model:
+
+- `send-campaign-to-userids` — `POST /v1/deliveries` per chunk of userIds. The original behaviour.
+- `update-custom-properties` — `POST /v1/batch` per chunk, bundling `PATCH /v1/installations/<id>?userId=<userId>` sub-requests that update custom properties from the CSV's extra columns.
+
+ES modules (`"type": "module"`).
 
 ## Layout
 
@@ -20,7 +25,7 @@ NodeJS program providing one or more SFTP-driven subcommands that integrate with
 - Run via dispatcher: `node index.js <name>` (used for the help path / discovery).
 - Docker build: `docker build -f Dockerfile.<name> -t wonderpush/sftp-connector-<name> .`
 - Docker run: must use `--init` so Node receives signals correctly.
-- Env vars required by `send-campaign-to-userids`: minimum `WP_ACCESS_TOKEN`, `SFTP_HOST`, `SFTP_PRIVATE_KEY` or `SFTP_PRIVATE_KEY_FILE`.
+- Env vars required by both subcommands: minimum `WP_ACCESS_TOKEN`, `SFTP_HOST`, `SFTP_PRIVATE_KEY` or `SFTP_PRIVATE_KEY_FILE`. Both subcommands share the same SFTP/CSV-parsing/file-monitoring env vars; per-subcommand env vars live in `commands/<name>/options.js` and are documented in `README.md`.
 
 No test suite, no linter configured.
 
@@ -39,9 +44,18 @@ Single long-running loop in `commands/send-campaign-to-userids/index.js`:
 4. Per file: `parseDataFromCsv` downloads to a tmp dir, strips UTF-8 BOM, parses with `csv-parse/sync`, and returns the raw records. `commands/send-campaign-to-userids/buildQueries.js` then filters out records missing `CSV_COLUMN_USER_ID` or `CSV_COLUMN_CAMPAIGN_ID` and chunks them into queries of `WP_MAXIMUM_DELIVERIES_TARGETS` (default 10000) records each. `campaignId` is taken from the **first record only** — all rows in a file must share it.
 5. Each chunk is POSTed by `postQuery.js`.
 
+## Architecture — `commands/update-custom-properties/`
+
+Same SFTP polling/staleness loop as `send-campaign-to-userids`. Differences are isolated to the file-processing step:
+
+1. Subcommand-specific env vars in `commands/update-custom-properties/options.js`: `WP_BATCH_ENDPOINT`, `WP_MAXIMUM_BATCH_REQUESTS`, `WP_IDEMPOTENCY_KEY_PREFIX` (default `sftp-ucp-`), `CSV_COLUMN_INSTALLATION_ID`, `EMPTY_CELL_BEHAVIOR`, plus three sentinel-set env vars `CELL_VALUE_FOR_{NULL,EMPTY_STRING,SKIP}` (each JSON-encoded as a string or array of strings, parsed into a `Set<string>` at startup, validated to be pairwise disjoint and not to contain `""`).
+2. `commands/update-custom-properties/buildBatches.js` turns the raw records into batch queries. For each row: skip if `installation_id` is empty (logged); otherwise build a `PATCH /v1/installations/<id>` sub-request whose `args.userId` is the cell value (`null` if empty) and whose `body.custom` is the per-column resolution of cell values. The resolver applies, in order: empty-cell rule (`EMPTY_CELL_BEHAVIOR`), `CELL_VALUE_FOR_SKIP`, `CELL_VALUE_FOR_NULL`, `CELL_VALUE_FOR_EMPTY_STRING`, then literal string. The startup disjointness check makes the order non-load-bearing but explicit. The resulting sub-requests are chunked into batches of `WP_MAXIMUM_BATCH_REQUESTS` (default 100), each becoming a query of the same shape that `postQuery.js` expects (`{ data, range, remotePath }`).
+3. Each batch chunk is POSTed by `postQuery.js`. The outer idempotency-key header carries the per-subcommand prefix.
+4. After a successful HTTP-2xx batch response, `commands/update-custom-properties/index.js` walks `response.data.responses` and logs any sub-response with `status >= 400`, plus a `{ total, failures }` summary. Per-sub-request errors do **not** trigger retry or backoff — the outer HTTP call succeeded.
+
 ### Idempotency (important)
 
-Each POST sends `X-WonderPush-Idempotency-Key: ${WP_IDEMPOTENCY_KEY_PREFIX}${sha1(remotePath).slice(-8)}-${fromRecordHex8}-${toRecordHex8}`. The server remembers idempotency keys for ~7 days. Consequence documented in README: a file deleted and re-added within 7 days with the same content will NOT redeliver. Changing `WP_IDEMPOTENCY_KEY_PREFIX` is the escape hatch.
+Each POST sends `X-WonderPush-Idempotency-Key: ${prefix}${sha1(remotePath).slice(-8)}-${fromRecordHex8}-${toRecordHex8}`. The prefix is subcommand-specific: `WP_IDEMPOTENCY_KEY_PREFIX` defaults to `sftp-sctu-` for `send-campaign-to-userids` and `sftp-ucp-` for `update-custom-properties`, so the two subcommands cannot collide on the same file path. The server remembers idempotency keys for ~7 days. Consequence documented in README: a file deleted and re-added within 7 days with the same content will NOT replay the action. Changing `WP_IDEMPOTENCY_KEY_PREFIX` is the escape hatch.
 
 ### Backoff in `postQuery.js`
 

@@ -4,27 +4,24 @@
 
 **Connect your SFTP to the WonderPush API.**
 
-This programs watches for new CSV files and triggers notification deliveries for your WonderPush project.
-It can be used to deliver millions of personalized push notifications to an audience computed by your CRM.
+This program watches for new CSV files on an SFTP folder and, depending on
+the subcommand selected at deployment time, either triggers WonderPush
+notification deliveries or updates installation custom properties.
 
-Here is how it works:
+Here is how it works, regardless of the subcommand:
 
 1. This program monitors an SFTP server for new files in a given folder.
 2. It starts by listing all existing files to avoid processing them again in the case the program is restarted.
 3. Once a new file is no longer modified, the program downloads it locally.
 4. The downloaded file is read as a CSV and split into blocks of many records.
-5. Each block results in an API call to the [`POST /v1/deliveries` endpoint](https://docs.wonderpush.com/reference/post-deliveries).
+5. Each block results in an API call to a WonderPush Management API endpoint, picked by the subcommand.
 6. When a file is deleted, the program forgets it. If an existing file is modified, the program ignores it.
 7. Due to the way the network calls are made idempotent for making retries safe against duplicate work,
-   if a previously existing file is deleted and re-added within 7 days, notifications will not be redelivered despite
+   if a previously existing file is deleted and re-added within 7 days, the corresponding action will not be re-performed despite
    new network calls being made, especially if the file was restored with its previous content.
 
-Here is what the CSV file must contain:
-
-* It must have a column representing the userId to send a notification to, named `user_id` by default.
-* It must have a column representing the campaignId to use for fetching the content, named `campaign_id` by default.
-* Each record within a CSV file must use the same campaignId. In practice, only the campaignId of the first record is read.
-* Any additional columns are treated as notification parameter of the same name, for personalizing the notification.
+The expected CSV layout depends on the subcommand. See the per-subcommand
+sections of the [Configuration](#configuration) chapter below.
 
 ## Usage
 
@@ -45,6 +42,7 @@ and its own Docker image.
 | Subcommand | Description |
 | --- | --- |
 | `send-campaign-to-userids` | Watches the SFTP folder for CSV files and triggers WonderPush deliveries (the historical behaviour). |
+| `update-custom-properties` | Watches the SFTP folder for CSV files and updates the WonderPush custom properties of the installations referenced in each row. |
 
 Run `node index.js -h` to list available subcommands.
 
@@ -91,24 +89,13 @@ The `--init` option is necessary for NodeJS to handle interrupt signals and quit
 
 The program uses environment variables exclusively.
 
-**WonderPush**
+**WonderPush — shared by every subcommand**
 
 * `WP_ACCESS_TOKEN`: **Mandatory.**
 
   Your WonderPush project's access token.
 
   Find it in the [_Settings / API credentials_](https://dashboard.wonderpush.com/applications/-/api-credentials) page.
-
-* `WP_ENDPOINT`: _Optional, default: `https://management-api.wonderpush.com/v1/deliveries`._
-
-  The WonderPush Management API endpoint used to trigger notification deliveries.
-
-* `WP_IDEMPOTENCY_KEY_PREFIX`: _Optional, default: `sftp-`._
-
-  The prefix of the [idempotency keys](https://docs.wonderpush.com/reference/idempotency-keys).
-  This permits safely retrying failed network calls, ensuring that no notifications end up being sent twice because of a retry.
-
-  Only strings consisting of up to 38 alphanumeric characters, dashes or underscores are accepted.
 
 * `WP_RETRIES_MAX`: _Optional, default: `2`._
 
@@ -117,6 +104,46 @@ The program uses environment variables exclusively.
 * `WP_TIMEOUT_MS`: _Optional, default: `30000`._
 
   How long to wait for a network call's response.
+
+**WonderPush — `send-campaign-to-userids` subcommand**
+
+* `WP_ENDPOINT`: _Optional, default: `https://management-api.wonderpush.com/v1/deliveries`._
+
+  The WonderPush Management API endpoint used to trigger notification deliveries.
+
+* `WP_MAXIMUM_DELIVERIES_TARGETS`: _Optional, default: `10000`._
+
+  The maximum number of target userIds per `POST /v1/deliveries` call.
+  Larger files are split into multiple sequential calls.
+
+* `WP_IDEMPOTENCY_KEY_PREFIX`: _Optional, default: `sftp-sctu-`._
+
+  The prefix of the [idempotency keys](https://docs.wonderpush.com/reference/idempotency-keys) sent with each call.
+  This permits safely retrying failed network calls, ensuring that no notifications end up being sent twice because of a retry.
+
+  Only strings consisting of up to 38 alphanumeric characters, dashes or underscores are accepted.
+
+  Note: the default was `sftp-` in earlier releases. Operators who relied
+  on that implicit default must now set `WP_IDEMPOTENCY_KEY_PREFIX=sftp-`
+  explicitly. Otherwise files re-seen by the new image within the ~7-day
+  server retention window may produce a fresh delivery.
+
+**WonderPush — `update-custom-properties` subcommand**
+
+* `WP_BATCH_ENDPOINT`: _Optional, default: `https://management-api.wonderpush.com/v1/batch`._
+
+  The WonderPush Management API endpoint used to issue batched custom-property updates.
+
+* `WP_MAXIMUM_BATCH_REQUESTS`: _Optional, default: `100`._
+
+  The maximum number of `PATCH /v1/installations/<id>` sub-requests bundled inside each outer `POST /v1/batch` call.
+  Files with more rows are split into multiple sequential batch calls.
+
+* `WP_IDEMPOTENCY_KEY_PREFIX`: _Optional, default: `sftp-ucp-`._
+
+  Same semantics as for the `send-campaign-to-userids` subcommand, but the default differs to keep the idempotency keys of the two subcommands from colliding if they ever process the same file path.
+
+  Only strings consisting of up to 38 alphanumeric characters, dashes or underscores are accepted.
 
 **SFTP connection**
 
@@ -181,15 +208,68 @@ The program uses environment variables exclusively.
 
   How many additional checks to perform once a new file is seen, to ensure the file has finished uploading, is free of modifications and ready for processing.
 
-**CSV configuration**
+**CSV configuration — shared by every subcommand**
 
 * `CSV_COLUMN_USER_ID`: _Optional, default: `user_id`._
 
-  The name of the CSV column that contains the userId to send a notification to.
+  The name of the CSV column that contains the userId associated with the row.
+
+**CSV layout — `send-campaign-to-userids` subcommand**
+
+The CSV must contain:
+
+* A column representing the userId to send a notification to (see `CSV_COLUMN_USER_ID`).
+* A column representing the campaignId to use for fetching the content (see `CSV_COLUMN_CAMPAIGN_ID`).
+* Each record within a file must use the same campaignId. In practice, only the campaignId of the first record is read.
+* Any additional columns are treated as notification parameters of the same name, for personalizing the notification.
+
+Each block of records results in an API call to the [`POST /v1/deliveries` endpoint](https://docs.wonderpush.com/reference/post-deliveries).
 
 * `CSV_COLUMN_CAMPAIGN_ID`: _Optional, default: `campaign_id`._
 
   The name of the CSV column that contains the campaignId used to send a notification.
+
+**CSV layout — `update-custom-properties` subcommand**
+
+The CSV must contain:
+
+* A column representing the installationId to update (see `CSV_COLUMN_INSTALLATION_ID`). Rows missing this value are skipped and logged.
+* A column representing the userId associated with the installation (see `CSV_COLUMN_USER_ID`). An empty cell means `userId: null` in the request — the installation is updated regardless of which user it is currently bound to.
+* Any additional columns are treated as custom-property names; the cell value becomes the property value in the resulting `PATCH /v1/installations/<id>` sub-request.
+
+Each block of records results in an API call to the [`POST /v1/batch` endpoint](https://docs.wonderpush.com/reference/post-batch) bundling many `PATCH /v1/installations/<id>?userId=<userId>` sub-requests.
+
+* `CSV_COLUMN_INSTALLATION_ID`: _Optional, default: `installation_id`._
+
+  The name of the CSV column that contains the installationId to update.
+
+* `EMPTY_CELL_BEHAVIOR`: _Optional, default: `skip`._
+
+  How an empty cell in a custom-property column is interpreted.
+  One of `skip` (the property key is omitted from the request body — no change on WonderPush), `null` (the property key is sent with a `null` value, clearing it on WonderPush), or `empty_string` (the property key is sent with `""`).
+
+  This option only applies to custom-property columns. The `user_id` column always treats an empty cell as `null`.
+
+* `CELL_VALUE_FOR_NULL`: _Optional, default: unset._
+  **Must be valid JSON when set.**
+
+  When set, configures one or more sentinel cell values that map to a `null` property value in the request body (clearing the property on WonderPush). Accepts either a single JSON string (`"NULL"`) or a JSON array of strings (`["NULL", "<null>"]`).
+
+  Matching is case-sensitive and applies only to custom-property cells (not `installation_id` nor `user_id`). The empty string is not allowed (it is reserved for the `EMPTY_CELL_BEHAVIOR` rule).
+
+* `CELL_VALUE_FOR_EMPTY_STRING`: _Optional, default: unset._
+  **Must be valid JSON when set.**
+
+  Same shape and rules as `CELL_VALUE_FOR_NULL`, but for sentinel values mapping to the empty string `""` in the request body.
+
+* `CELL_VALUE_FOR_SKIP`: _Optional, default: unset._
+  **Must be valid JSON when set.**
+
+  Same shape and rules as `CELL_VALUE_FOR_NULL`, but for sentinel values mapping to "omit this property from the request body".
+
+  The three sentinel sets (`CELL_VALUE_FOR_NULL`, `CELL_VALUE_FOR_EMPTY_STRING`, `CELL_VALUE_FOR_SKIP`) must be pairwise disjoint — the program fails to start if the same cell value appears in two of them.
+
+  Picking sentinels is the operator's responsibility, since unusual literal cell values may otherwise be ambiguous. For example, in a dataset that may legitimately contain the string `"NULL"` (e.g. as a last name), do not pick `"NULL"` as a sentinel — use something the data is guaranteed not to contain, such as `"<<NULL>>"` or `" __NULL__ "`.
 
 **CSV parsing**
 
