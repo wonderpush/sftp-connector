@@ -3,13 +3,13 @@ import path from "path";
 import Client from "ssh2-sftp-client";
 
 // HELPERS
-import options from "../options.js";
-import commandOptions from "./send-campaign-to-userids.options.js";
-import log from "../log.js";
-import getFilesList from "../getFilesList.js";
-import parseDataFromCsv from "../parseDataFromCsv.js";
-import buildQueries from "./send-campaign-to-userids.buildQueries.js";
-import postQuery from "../postQuery.js";
+import options from "../../options.js";
+import commandOptions from "./options.js";
+import log from "../../log.js";
+import getFilesList from "../../getFilesList.js";
+import parseDataFromCsv from "../../parseDataFromCsv.js";
+import buildQueries from "./buildQueries.js";
+import postQuery from "../../postQuery.js";
 
 let candidateFiles = {};
 let lastListing = {};

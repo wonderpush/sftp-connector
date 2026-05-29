@@ -14,4 +14,4 @@ COPY . .
 RUN set -eux \
     && npm ci --omit=dev
 
-ENTRYPOINT [ "node", "commands/send-campaign-to-userids.js", "--" ]
+ENTRYPOINT [ "node", "commands/send-campaign-to-userids/index.js", "--" ]

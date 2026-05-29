@@ -2,7 +2,7 @@
 // CSV records returned by the shared parseDataFromCsv helper into POST
 // /v1/deliveries queries, chunked into batches of at most maxTargets records.
 
-import options from "../options.js";
+import options from "../../options.js";
 
 const buildQueries = (records, remotePath, maxTargets) => {
 	const queriesArray = [];

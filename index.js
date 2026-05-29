@@ -1,5 +1,5 @@
 const COMMANDS = {
-	"send-campaign-to-userids": () => import("./commands/send-campaign-to-userids.js"),
+	"send-campaign-to-userids": () => import("./commands/send-campaign-to-userids/index.js"),
 };
 
 function usage(stream) {

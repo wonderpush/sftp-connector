@@ -50,11 +50,11 @@ Run `node index.js -h` to list available subcommands.
 
 To add a new subcommand `<name>`:
 
-1. Add `commands/<name>.js` containing the subcommand body.
+1. Create a `commands/<name>/` folder with an `index.js` entry point containing the subcommand body.
 2. Register it in the `COMMANDS` map in `index.js`.
 3. Add a `start:<name>` script to `package.json`.
-4. Add a `Dockerfile.<name>` whose `ENTRYPOINT` invokes `commands/<name>.js`.
-5. If the subcommand needs its own environment variables, add `commands/<name>.options.js` for them; options shared by every subcommand belong in the top-level `options.js`.
+4. Add a `Dockerfile.<name>` whose `ENTRYPOINT` invokes `commands/<name>/index.js`.
+5. Keep any subcommand-specific helpers inside `commands/<name>/` (e.g. an `options.js` for environment variables only that subcommand uses); options shared by every subcommand belong in the top-level `options.js`.
 
 ### Run using the command line
 
