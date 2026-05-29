@@ -4,24 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-NodeJS daemon that watches an SFTP folder for new CSV files and triggers push notification deliveries via the WonderPush Management API (`POST /v1/deliveries`). ES modules (`"type": "module"`).
+NodeJS program providing one or more SFTP-driven subcommands that integrate with the WonderPush Management API. Today only `send-campaign-to-userids` exists; it watches an SFTP folder for new CSV files and triggers push notification deliveries (`POST /v1/deliveries`). ES modules (`"type": "module"`).
+
+## Layout
+
+- `index.js` — tiny dispatcher. Takes the subcommand name as its sole CLI arg, prints usage and exits 1 on missing/unknown, supports `-h`/`--help`. Subcommands are registered in its `COMMANDS` map.
+- `commands/<name>.js` — one file per subcommand. Body runs at import time (top-level `await`).
+- `Dockerfile.<name>` — one file per subcommand, each producing its own image whose `ENTRYPOINT` invokes the command file directly (bypassing the dispatcher). There is **no** generic `Dockerfile`; `docker build .` without `-f` is intentionally a failure.
+- Shared helpers (`options.js`, `log.js`, `getFilesList.js`, `parseDataFromCsv.js`, `postQuery.js`) live at the repo root.
 
 ## Commands
 
 - Install: `npm install`
-- Run: `npm run start` (requires env vars; minimum: `WP_ACCESS_TOKEN`, `SFTP_HOST`, `SFTP_PRIVATE_KEY` or `SFTP_PRIVATE_KEY_FILE`)
-- Docker build: `docker build . -t wonderpush/sftp-connector`
-- Docker run: must use `--init` so Node receives signals correctly
+- Run a subcommand: `npm run start:<name>` (e.g. `npm run start:send-campaign-to-userids`). Each `start:<name>` script invokes the command file directly, bypassing the dispatcher.
+- Run via dispatcher: `node index.js <name>` (used for the help path / discovery).
+- Docker build: `docker build -f Dockerfile.<name> -t wonderpush/sftp-connector-<name> .`
+- Docker run: must use `--init` so Node receives signals correctly.
+- Env vars required by `send-campaign-to-userids`: minimum `WP_ACCESS_TOKEN`, `SFTP_HOST`, `SFTP_PRIVATE_KEY` or `SFTP_PRIVATE_KEY_FILE`.
 
 No test suite, no linter configured.
 
-## Architecture
+## Architecture — `commands/send-campaign-to-userids.js`
 
 All configuration comes exclusively from environment variables, parsed and validated in `options.js` at startup (frozen object). See `README.md` for the full list.
 
-Single long-running loop in `index.js`:
+Single long-running loop in `commands/send-campaign-to-userids.js`:
 
-1. Connect once via `ssh2-sftp-client` (`sftp.connect`), wrapped in `index.js` by an exponential backoff driven by `SFTP_RETRIES`, `SFTP_RETRY_WAIT_MIN_MS`, `SFTP_RETRY_WAIT_FACTOR`.
+1. Connect once via `ssh2-sftp-client` (`sftp.connect`), wrapped by an exponential backoff driven by `SFTP_RETRIES`, `SFTP_RETRY_WAIT_MIN_MS`, `SFTP_RETRY_WAIT_FACTOR`.
 2. Initial `getFilesList` populates `lastListing` so pre-existing files are NOT reprocessed on restart.
 3. Loop every `LISTING_INTERVAL_MS`:
    - Diff `newListing` vs `lastListing` to detect added/deleted/modified files. Added files enter `candidateFiles` with a counter at 0.

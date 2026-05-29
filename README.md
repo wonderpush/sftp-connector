@@ -36,6 +36,25 @@ cd sftp-connector
 git checkout latest
 ```
 
+### Subcommands
+
+The program is organized as a set of subcommands; each subcommand is a
+distinct mode of operation with its own daemon loop, its own npm script,
+and its own Docker image.
+
+| Subcommand | Description |
+| --- | --- |
+| `send-campaign-to-userids` | Watches the SFTP folder for CSV files and triggers WonderPush deliveries (the historical behaviour). |
+
+Run `node index.js -h` to list available subcommands.
+
+To add a new subcommand `<name>`:
+
+1. Add `commands/<name>.js` containing the subcommand body.
+2. Register it in the `COMMANDS` map in `index.js`.
+3. Add a `start:<name>` script to `package.json`.
+4. Add a `Dockerfile.<name>` whose `ENTRYPOINT` invokes `commands/<name>.js`.
+
 ### Run using the command line
 
 ```
@@ -47,18 +66,22 @@ export WP_ACCESS_TOKEN=…
 export SFTP_HOST=…
 export SFTP_PRIVATE_KEY_FILE=…
 
-# Run the program
-npm run start
+# Run a subcommand
+npm run start:send-campaign-to-userids
 ```
 
 ### Run using Docker
 
+Each subcommand has its own Dockerfile and produces its own image. There
+is no generic `Dockerfile`, so `docker build .` will fail unless you
+specify a subcommand-specific one with `-f`.
+
 ```
-# Build the image once
-docker build . -t wonderpush/sftp-connector
+# Build the image for a subcommand
+docker build -f Dockerfile.send-campaign-to-userids -t wonderpush/sftp-connector-send-campaign-to-userids .
 
 # Run the image
-docker run -ti --init --env WP_ACCESS_TOKEN=… --env SFTP_HOST=… --env SFTP_PRIVATE_KEY="$(cat …)" wonderpush/sftp-connector@latest
+docker run -ti --init --env WP_ACCESS_TOKEN=… --env SFTP_HOST=… --env SFTP_PRIVATE_KEY="$(cat …)" wonderpush/sftp-connector-send-campaign-to-userids
 ```
 
 The `--init` option is necessary for NodeJS to handle interrupt signals and quit properly.
