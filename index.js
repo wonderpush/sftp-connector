@@ -20,18 +20,31 @@ const sftpConfig = {
 	username: options.SFTP_USER,
 	privateKey: options.SFTP_PRIVATE_KEY,
 	passphrase: options.SFTP_PASSPHRASE,
-	retries: options.SFTP_RETRIES,
-	retry_factor: options.SFTP_RETRY_WAIT_FACTOR,
-	retry_minTimeout: options.SFTP_RETRY_WAIT_MIN_MS,
 };
+
+// ssh2-sftp-client v10+ removed its built-in connection retry, so we implement
+// the same exponential backoff here to preserve the SFTP_RETRIES* env vars.
+async function connectWithRetry() {
+	const maxAttempts = options.SFTP_RETRIES + 1;
+	let wait = options.SFTP_RETRY_WAIT_MIN_MS;
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		try {
+			return await sftp.connect(sftpConfig);
+		} catch (ex) {
+			if (attempt === maxAttempts) throw ex;
+			log(`SFTP connect attempt ${attempt}/${maxAttempts} failed: ${ex.message}; retrying in ${wait}ms`);
+			await new Promise(res => setTimeout(res, wait));
+			wait = Math.round(wait * options.SFTP_RETRY_WAIT_FACTOR);
+		}
+	}
+}
 
 let sftpChannel = null;
 try {
-	sftpChannel = await sftp.connect(sftpConfig);
+	sftpChannel = await connectWithRetry();
 } catch (ex) {
-	log("Failed to connect after " + sftpConfig.retries + 1 + " tries, aborting");
+	log("Failed to connect after " + (options.SFTP_RETRIES + 1) + " tries, aborting");
 }
-// Note: Once connected, each command will have its own retry
 
 getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(async (newListing) => {
 	log("SFTP connection established");
