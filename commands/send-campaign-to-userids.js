@@ -4,9 +4,11 @@ import Client from "ssh2-sftp-client";
 
 // HELPERS
 import options from "../options.js";
+import commandOptions from "./send-campaign-to-userids.options.js";
 import log from "../log.js";
 import getFilesList from "../getFilesList.js";
 import parseDataFromCsv from "../parseDataFromCsv.js";
+import buildQueries from "./send-campaign-to-userids.buildQueries.js";
 import postQuery from "../postQuery.js";
 
 let candidateFiles = {};
@@ -114,16 +116,14 @@ getFilesList(sftp, sftpConfig, options.SFTP_PATH).then(async (newListing) => {
 
 					const filePath = path.join(options.SFTP_PATH, path.basename(fileName));
 
-					await parseDataFromCsv(sftp, sftpConfig, filePath).then(
-						async queriesArray => {
-							if (queriesArray.length === 0) {
-								log("No valid records found in file:", fileName);
-							}
-							for (const query of queriesArray) {
-								await postQuery(options.WP_ENDPOINT, query, fileName);
-							}
-						}
-					);
+					const records = await parseDataFromCsv(sftp, sftpConfig, filePath);
+					const queriesArray = buildQueries(records, filePath, commandOptions.WP_MAXIMUM_DELIVERIES_TARGETS);
+					if (queriesArray.length === 0) {
+						log("No valid records found in file:", fileName);
+					}
+					for (const query of queriesArray) {
+						await postQuery(commandOptions.WP_ENDPOINT, query, fileName);
+					}
 
 					log("File processed:", fileName);
 				}

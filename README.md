@@ -54,6 +54,7 @@ To add a new subcommand `<name>`:
 2. Register it in the `COMMANDS` map in `index.js`.
 3. Add a `start:<name>` script to `package.json`.
 4. Add a `Dockerfile.<name>` whose `ENTRYPOINT` invokes `commands/<name>.js`.
+5. If the subcommand needs its own environment variables, add `commands/<name>.options.js` for them; options shared by every subcommand belong in the top-level `options.js`.
 
 ### Run using the command line
 

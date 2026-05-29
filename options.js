@@ -60,7 +60,6 @@ const CSV_PARSE_SKIP_EMPTY_LINES = tryJsonParse(process.env.CSV_PARSE_SKIP_EMPTY
 const CSV_COLUMN_USER_ID = process.env.CSV_COLUMN_USER_ID || 'user_id';
 const CSV_COLUMN_CAMPAIGN_ID = process.env.CSV_COLUMN_CAMPAIGN_ID || 'campaign_id';
 
-const WP_ENDPOINT = process.env.WP_ENDPOINT || 'https://management-api.wonderpush.com/v1/deliveries';
 const WP_TIMEOUT_MS = parseInt(process.env.WP_TIMEOUT_MS || '30000');
 if (isNaN(WP_TIMEOUT_MS) || WP_TIMEOUT_MS <= 0) {
 	throw new Error('Bad WP_TIMEOUT_MS environment variable');
@@ -68,10 +67,6 @@ if (isNaN(WP_TIMEOUT_MS) || WP_TIMEOUT_MS <= 0) {
 const WP_ACCESS_TOKEN = process.env.WP_ACCESS_TOKEN;
 if (!WP_ACCESS_TOKEN) {
 	throw new Error('Missing or bad WP_ACCESS_TOKEN environment variable');
-}
-const WP_MAXIMUM_DELIVERIES_TARGETS = parseInt(process.env.WP_MAXIMUM_DELIVERIES_TARGETS || '10000');
-if (isNaN(WP_MAXIMUM_DELIVERIES_TARGETS) || WP_MAXIMUM_DELIVERIES_TARGETS <= 0) {
-	throw new Error('Bad WP_MAXIMUM_DELIVERIES_TARGETS environment variable');
 }
 const WP_IDEMPOTENCY_KEY_PREFIX = process.env.WP_IDEMPOTENCY_KEY_PREFIX || 'sftp-';
 if (WP_IDEMPOTENCY_KEY_PREFIX.length > 38) {
@@ -107,10 +102,8 @@ const options = {
 	CSV_PARSE_SKIP_EMPTY_LINES,
 	CSV_COLUMN_USER_ID,
 	CSV_COLUMN_CAMPAIGN_ID,
-	WP_ENDPOINT,
 	WP_TIMEOUT_MS,
 	WP_ACCESS_TOKEN,
-	WP_MAXIMUM_DELIVERIES_TARGETS,
 	WP_IDEMPOTENCY_KEY_PREFIX,
 	WP_RETRIES_MAX,
 };
