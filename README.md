@@ -65,8 +65,12 @@ export WP_ACCESS_TOKEN=…
 export SFTP_HOST=…
 export SFTP_PRIVATE_KEY_FILE=…
 
-# Run a subcommand
-npm run start:send-campaign-to-userids
+# Choose the subcommand to run:
+#cmd=send-campaign-to-userids
+#cmd=update-custom-properties
+
+# Run the subcommand
+npm run start:$cmd
 ```
 
 ### Run using Docker
@@ -76,11 +80,15 @@ is no generic `Dockerfile`, so `docker build .` will fail unless you
 specify a subcommand-specific one with `-f`.
 
 ```
-# Build the image for a subcommand
-docker build -f Dockerfile.send-campaign-to-userids -t wonderpush/sftp-connector-send-campaign-to-userids .
+# Choose the subcommand to run:
+#cmd=send-campaign-to-userids
+#cmd=update-custom-properties
+
+# Build the image for the subcommand
+docker build -f Dockerfile.$cmd -t wonderpush/sftp-connector-$cmd .
 
 # Run the image
-docker run -ti --init --env WP_ACCESS_TOKEN=… --env SFTP_HOST=… --env SFTP_PRIVATE_KEY="$(cat …)" wonderpush/sftp-connector-send-campaign-to-userids
+docker run -ti --init --env WP_ACCESS_TOKEN=… --env SFTP_HOST=… --env SFTP_PRIVATE_KEY="$(cat …)" wonderpush/sftp-connector-$cmd
 ```
 
 The `--init` option is necessary for NodeJS to handle interrupt signals and quit properly.
