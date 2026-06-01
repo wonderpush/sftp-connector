@@ -48,7 +48,7 @@ Run `node index.js -h` to list available subcommands.
 
 To add a new subcommand `<name>`:
 
-1. Create a `commands/<name>/` folder with an `index.js` entry point containing the subcommand body.
+1. Create a `commands/<name>/` folder with an `index.js` that calls `watchSftpFolder` (from `../../sftpWatcher.js`) with a callback `async (sftp, sftpConfig, filePath, fileName) => { … }` doing the per-file work. The shared watcher handles the SFTP connect/retry/listing/staleness loop; the callback owns parsing, payload assembly, the POST, and response handling.
 2. Register it in the `COMMANDS` map in `index.js`.
 3. Add a `start:<name>` script to `package.json`.
 4. Add a `Dockerfile.<name>` whose `ENTRYPOINT` invokes `commands/<name>/index.js`.

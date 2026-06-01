@@ -14,9 +14,9 @@ ES modules (`"type": "module"`).
 ## Layout
 
 - `index.js` — tiny dispatcher. Takes the subcommand name as its sole CLI arg, prints usage and exits 1 on missing/unknown, supports `-h`/`--help`. Subcommands are registered in its `COMMANDS` map.
-- `commands/<name>/` — one subfolder per subcommand. Its `index.js` is the entry point; the body runs at import time (top-level `await`). Any subcommand-specific helpers live alongside it in the same folder (e.g. `options.js` for env vars only that subcommand uses, parsed/validated/frozen like the shared root `options.js`; `buildQueries.js` for turning raw CSV records into delivery queries — filtering, chunking by `maxTargets`, payload assembly).
+- `commands/<name>/` — one subfolder per subcommand. Its `index.js` is the entry point; the body runs at import time (top-level `await`) and is intentionally tiny — it just calls `watchSftpFolder` from `../../sftpWatcher.js` with a per-file-processing callback. Any subcommand-specific helpers live alongside it in the same folder (e.g. `options.js` for env vars only that subcommand uses, parsed/validated/frozen like the shared root `options.js`; `buildQueries.js` / `buildBatches.js` for turning raw CSV records into the subcommand's API payload — filtering, chunking, payload assembly).
 - `Dockerfile.<name>` — one file per subcommand, each producing its own image whose `ENTRYPOINT` invokes `commands/<name>/index.js` directly (bypassing the dispatcher). There is **no** generic `Dockerfile`; `docker build .` without `-f` is intentionally a failure.
-- Shared helpers (`options.js`, `log.js`, `getFilesList.js`, `parseDataFromCsv.js`, `postQuery.js`) live at the repo root. The root `options.js` holds only options common to all subcommands; subcommand-specific options live in `commands/<name>/options.js`. Shared helpers must stay subcommand-agnostic: `parseDataFromCsv` only downloads, strips the BOM, and returns the unfiltered parsed records — record filtering and query building are the subcommand's job.
+- Shared helpers (`options.js`, `log.js`, `getFilesList.js`, `parseDataFromCsv.js`, `postQuery.js`, `sftpWatcher.js`) live at the repo root. The root `options.js` holds only options common to all subcommands; subcommand-specific options live in `commands/<name>/options.js`. Shared helpers must stay subcommand-agnostic: `parseDataFromCsv` only downloads, strips the BOM, and returns the unfiltered parsed records — record filtering and query building are the subcommand's job. `sftpWatcher.js` owns the SFTP connect/retry/listing/staleness loop and invokes the subcommand's per-file callback with `(sftp, sftpConfig, filePath, fileName)`; it knows nothing about CSV parsing, payload shape, or the WonderPush endpoints.
 
 ## Commands
 
@@ -40,11 +40,9 @@ Currently only `update-custom-properties` has tests:
 
 No linter is configured.
 
-## Architecture — `commands/send-campaign-to-userids/`
+## Architecture — shared loop in `sftpWatcher.js`
 
-All configuration comes exclusively from environment variables, parsed and validated at startup into frozen objects: shared options in the root `options.js`, plus the subcommand-specific `WP_ENDPOINT` and `WP_MAXIMUM_DELIVERIES_TARGETS` in `commands/send-campaign-to-userids/options.js`. See `README.md` for the full list.
-
-Single long-running loop in `commands/send-campaign-to-userids/index.js`:
+Both subcommands share the same SFTP daemon body, factored into `sftpWatcher.js`:
 
 1. Connect once via `ssh2-sftp-client` (`sftp.connect`), wrapped by an exponential backoff driven by `SFTP_RETRIES`, `SFTP_RETRY_WAIT_MIN_MS`, `SFTP_RETRY_WAIT_FACTOR`.
 2. Initial `getFilesList` populates `lastListing` so pre-existing files are NOT reprocessed on restart.
@@ -52,12 +50,21 @@ Single long-running loop in `commands/send-campaign-to-userids/index.js`:
    - Diff `newListing` vs `lastListing` to detect added/deleted/modified files. Added files enter `candidateFiles` with a counter at 0.
    - For each candidate, if `modifyTime`/`size` changed since last poll, reset counter to 0; otherwise increment it.
    - Files whose counter reaches `STALE_FILE_CHECKS` are considered stable and processed (sequentially, one at a time).
-4. Per file: `parseDataFromCsv` downloads to a tmp dir, strips UTF-8 BOM, parses with `csv-parse/sync`, and returns the raw records. `commands/send-campaign-to-userids/buildQueries.js` then filters out records missing `CSV_COLUMN_USER_ID` or `CSV_COLUMN_CAMPAIGN_ID` and chunks them into queries of `WP_MAXIMUM_DELIVERIES_TARGETS` (default 10000) records each. `campaignId` is taken from the **first record only** — all rows in a file must share it.
-5. Each chunk is POSTed by `postQuery.js`.
+4. Per stable file, `sftpWatcher.js` calls `await processFile(sftp, sftpConfig, filePath, fileName)`. The subcommand's callback owns parsing, payload assembly, the POST, and response handling.
+
+Configuration in both subcommands comes exclusively from environment variables, parsed and validated at startup into frozen objects: shared options in the root `options.js`, plus subcommand-specific options in `commands/<name>/options.js`. See `README.md` for the full list.
+
+## Architecture — `commands/send-campaign-to-userids/`
+
+The subcommand's `index.js` is a 10-line callback handed to `watchSftpFolder`:
+
+1. `parseDataFromCsv` downloads to a tmp dir, strips UTF-8 BOM, parses with `csv-parse/sync`, and returns the raw records.
+2. `commands/send-campaign-to-userids/buildQueries.js` filters out records missing `CSV_COLUMN_USER_ID` or `CSV_COLUMN_CAMPAIGN_ID` and chunks them into queries of `WP_MAXIMUM_DELIVERIES_TARGETS` (default 10000) records each. `campaignId` is taken from the **first record only** — all rows in a file must share it.
+3. Each chunk is POSTed by `postQuery.js`.
 
 ## Architecture — `commands/update-custom-properties/`
 
-Same SFTP polling/staleness loop as `send-campaign-to-userids`. Differences are isolated to the file-processing step:
+Same `sftpWatcher.js` loop as `send-campaign-to-userids`. Per-file work in the subcommand's callback:
 
 1. Subcommand-specific env vars in `commands/update-custom-properties/options.js`: `WP_BATCH_ENDPOINT`, `WP_MAXIMUM_BATCH_REQUESTS`, `WP_IDEMPOTENCY_KEY_PREFIX` (default `sftp-ucp-`), `CSV_COLUMN_INSTALLATION_ID`, `EMPTY_CELL_BEHAVIOR`, plus three sentinel-set env vars `CELL_VALUE_FOR_{NULL,EMPTY_STRING,SKIP}` (each JSON-encoded as a string or array of strings, parsed into a `Set<string>` at startup, validated to be pairwise disjoint and not to contain `""`).
 2. `commands/update-custom-properties/buildBatches.js` turns the raw records into batch queries. For each row: skip if `installation_id` is empty (logged); otherwise build a `PATCH /v1/installations/<id>` sub-request whose `args.userId` is the cell value (`null` if empty) and whose `body.custom` is the per-column resolution of cell values. Column discovery is done per-row from each record's own keys (not from `records[0]`), so it stays correct when columns differ between rows or when `CSV_PARSE_COLUMNS` is configured. If after resolution `custom` has no keys (all cells resolved to SKIP), the row is also skipped and logged. The resolver applies, in order: empty-cell rule (`EMPTY_CELL_BEHAVIOR`), `CELL_VALUE_FOR_SKIP`, `CELL_VALUE_FOR_NULL`, `CELL_VALUE_FOR_EMPTY_STRING`, then literal string. The startup disjointness check makes the order non-load-bearing but explicit. The resulting sub-requests are chunked into batches of `WP_MAXIMUM_BATCH_REQUESTS` (default 100), each becoming a query of the same shape that `postQuery.js` expects (`{ data, range, remotePath }`).
