@@ -30,11 +30,13 @@ ES modules (`"type": "module"`).
 
 ## Tests
 
-Tests live under `tests/` and follow Node's `node:test` conventions (`*.test.js`).
+Tests are co-located with the subcommand they exercise — `*.test.js` files sit next to the production files inside `commands/<name>/`. Node's `node:test` runner discovers them recursively via its default `**/*.test.js` pattern.
 
-- `tests/buildBatches.test.js` exercises `commands/update-custom-properties/buildBatches.js` end-to-end: spec example, sentinel/empty-cell resolution, per-row column discovery, row-skipping rules, chunking by `maxRequests`.
-- `tests/optionsValidation.test.js` exercises the startup validation in `commands/update-custom-properties/options.js`: each scenario loads the module in a subprocess and asserts on the resulting error message.
-- `tests/runBuildBatches.js` is a helper invoked by `buildBatches.test.js` — not a test itself. Since `commandOptions` is frozen at module-load time, scenarios that vary env-var configuration each spawn a fresh helper process so `options.js` re-evaluates with the right env. Production `log()` output goes to stdout; the helper writes the JSON result to stderr so the two streams stay separated for the test parser.
+Currently only `update-custom-properties` has tests:
+
+- `commands/update-custom-properties/buildBatches.test.js` exercises `buildBatches.js` end-to-end: spec example, sentinel/empty-cell resolution, per-row column discovery, row-skipping rules, chunking by `maxRequests`.
+- `commands/update-custom-properties/optionsValidation.test.js` exercises the startup validation in `options.js`: each scenario loads the module in a subprocess and asserts on the resulting error message.
+- `commands/update-custom-properties/runBuildBatches.js` is a helper invoked by `buildBatches.test.js` — not a test itself. Since `commandOptions` is frozen at module-load time, scenarios that vary env-var configuration each spawn a fresh helper process so `options.js` re-evaluates with the right env. Production `log()` output goes to stdout; the helper writes the JSON result to stderr so the two streams stay separated for the test parser.
 
 No linter is configured.
 

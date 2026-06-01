@@ -1,9 +1,9 @@
-// Tests for commands/update-custom-properties/buildBatches.js.
+// Tests for ./buildBatches.js.
 //
 // buildBatches reads its configuration from commandOptions, which is frozen
 // at module load time. To exercise different EMPTY_CELL_BEHAVIOR / sentinel
 // configurations within the same test run we invoke a helper subprocess
-// (tests/runBuildBatches.js) per scenario, set the relevant env vars on the
+// (./runBuildBatches.js) per scenario, set the relevant env vars on the
 // child, and parse the JSON result from its stderr.
 
 import { test } from "node:test";
@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
 import path from "node:path";
 
-const HELPER = path.join("tests", "runBuildBatches.js");
+const HELPER = path.join("commands", "update-custom-properties", "runBuildBatches.js");
 
 const baseEnv = {
 	WP_ACCESS_TOKEN: "test-token",
