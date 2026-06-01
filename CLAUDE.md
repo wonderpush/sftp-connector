@@ -26,8 +26,17 @@ ES modules (`"type": "module"`).
 - Docker build: `docker build -f Dockerfile.<name> -t wonderpush/sftp-connector-<name> .`
 - Docker run: must use `--init` so Node receives signals correctly.
 - Env vars required by both subcommands: minimum `WP_ACCESS_TOKEN`, `SFTP_HOST`, `SFTP_PRIVATE_KEY` or `SFTP_PRIVATE_KEY_FILE`. Both subcommands share the same SFTP/CSV-parsing/file-monitoring env vars; per-subcommand env vars live in `commands/<name>/options.js` and are documented in `README.md`.
+- Run tests: `npm test` (uses Node's built-in `node:test` runner; no extra deps).
 
-No test suite, no linter configured.
+## Tests
+
+Tests live under `tests/` and follow Node's `node:test` conventions (`*.test.js`).
+
+- `tests/buildBatches.test.js` exercises `commands/update-custom-properties/buildBatches.js` end-to-end: spec example, sentinel/empty-cell resolution, per-row column discovery, row-skipping rules, chunking by `maxRequests`.
+- `tests/optionsValidation.test.js` exercises the startup validation in `commands/update-custom-properties/options.js`: each scenario loads the module in a subprocess and asserts on the resulting error message.
+- `tests/runBuildBatches.js` is a helper invoked by `buildBatches.test.js` — not a test itself. Since `commandOptions` is frozen at module-load time, scenarios that vary env-var configuration each spawn a fresh helper process so `options.js` re-evaluates with the right env. Production `log()` output goes to stdout; the helper writes the JSON result to stderr so the two streams stay separated for the test parser.
+
+No linter is configured.
 
 ## Architecture — `commands/send-campaign-to-userids/`
 
