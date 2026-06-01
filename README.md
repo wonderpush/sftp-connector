@@ -105,6 +105,13 @@ The program uses environment variables exclusively.
 
   How long to wait for a network call's response.
 
+* `WP_IDEMPOTENCY_KEY_PREFIX`: _Optional, default depends on subcommand._
+
+  The prefix of the [idempotency keys](https://docs.wonderpush.com/reference/idempotency-keys) sent with each call.
+  This permits safely retrying failed network calls, ensuring that no action is performed twice because of a retry.
+
+  Only strings consisting of up to 38 alphanumeric characters, dashes or underscores are accepted.
+
 **WonderPush — `send-campaign-to-userids` subcommand**
 
 * `WP_ENDPOINT`: _Optional, default: `https://management-api.wonderpush.com/v1/deliveries`._
@@ -118,15 +125,7 @@ The program uses environment variables exclusively.
 
 * `WP_IDEMPOTENCY_KEY_PREFIX`: _Optional, default: `sftp-sctu-`._
 
-  The prefix of the [idempotency keys](https://docs.wonderpush.com/reference/idempotency-keys) sent with each call.
-  This permits safely retrying failed network calls, ensuring that no notifications end up being sent twice because of a retry.
-
-  Only strings consisting of up to 38 alphanumeric characters, dashes or underscores are accepted.
-
-  Note: the default was `sftp-` in earlier releases. Operators who relied
-  on that implicit default must now set `WP_IDEMPOTENCY_KEY_PREFIX=sftp-`
-  explicitly. Otherwise files re-seen by the new image within the ~7-day
-  server retention window may produce a fresh delivery.
+  See the semantics described above.
 
 **WonderPush — `update-custom-properties` subcommand**
 
@@ -141,9 +140,7 @@ The program uses environment variables exclusively.
 
 * `WP_IDEMPOTENCY_KEY_PREFIX`: _Optional, default: `sftp-ucp-`._
 
-  Same semantics as for the `send-campaign-to-userids` subcommand, but the default differs to keep the idempotency keys of the two subcommands from colliding if they ever process the same file path.
-
-  Only strings consisting of up to 38 alphanumeric characters, dashes or underscores are accepted.
+  See the semantics described above.
 
 **SFTP connection**
 
@@ -207,69 +204,6 @@ The program uses environment variables exclusively.
 * `STALE_FILE_CHECKS`: _Optional, default: `1`._
 
   How many additional checks to perform once a new file is seen, to ensure the file has finished uploading, is free of modifications and ready for processing.
-
-**CSV configuration — shared by every subcommand**
-
-* `CSV_COLUMN_USER_ID`: _Optional, default: `user_id`._
-
-  The name of the CSV column that contains the userId associated with the row.
-
-**CSV layout — `send-campaign-to-userids` subcommand**
-
-The CSV must contain:
-
-* A column representing the userId to send a notification to (see `CSV_COLUMN_USER_ID`).
-* A column representing the campaignId to use for fetching the content (see `CSV_COLUMN_CAMPAIGN_ID`).
-* Each record within a file must use the same campaignId. In practice, only the campaignId of the first record is read.
-* Any additional columns are treated as notification parameters of the same name, for personalizing the notification.
-
-Each block of records results in an API call to the [`POST /v1/deliveries` endpoint](https://docs.wonderpush.com/reference/post-deliveries).
-
-* `CSV_COLUMN_CAMPAIGN_ID`: _Optional, default: `campaign_id`._
-
-  The name of the CSV column that contains the campaignId used to send a notification.
-
-**CSV layout — `update-custom-properties` subcommand**
-
-The CSV must contain:
-
-* A column representing the installationId to update (see `CSV_COLUMN_INSTALLATION_ID`). Rows missing this value are skipped and logged.
-* A column representing the userId associated with the installation (see `CSV_COLUMN_USER_ID`). An empty cell means `userId: null` in the request — the installation is updated regardless of which user it is currently bound to.
-* Any additional columns are treated as custom-property names; the cell value becomes the property value in the resulting `PATCH /v1/installations/<id>` sub-request.
-
-Each block of records results in an API call to the [`POST /v1/batch` endpoint](https://docs.wonderpush.com/reference/post-batch) bundling many `PATCH /v1/installations/<id>?userId=<userId>` sub-requests.
-
-* `CSV_COLUMN_INSTALLATION_ID`: _Optional, default: `installation_id`._
-
-  The name of the CSV column that contains the installationId to update.
-
-* `EMPTY_CELL_BEHAVIOR`: _Optional, default: `skip`._
-
-  How an empty cell in a custom-property column is interpreted.
-  One of `skip` (the property key is omitted from the request body — no change on WonderPush), `null` (the property key is sent with a `null` value, clearing it on WonderPush), or `empty_string` (the property key is sent with `""`).
-
-  This option only applies to custom-property columns. The `user_id` column always treats an empty cell as `null`.
-
-* `CELL_VALUE_FOR_NULL`: _Optional, default: unset._
-  **Must be valid JSON when set.**
-
-  When set, configures one or more sentinel cell values that map to a `null` property value in the request body (clearing the property on WonderPush). Accepts either a single JSON string (`"NULL"`) or a JSON array of strings (`["NULL", "<null>"]`).
-
-  Matching is case-sensitive and applies only to custom-property cells (not `installation_id` nor `user_id`). The empty string is not allowed (it is reserved for the `EMPTY_CELL_BEHAVIOR` rule).
-
-* `CELL_VALUE_FOR_EMPTY_STRING`: _Optional, default: unset._
-  **Must be valid JSON when set.**
-
-  Same shape and rules as `CELL_VALUE_FOR_NULL`, but for sentinel values mapping to the empty string `""` in the request body.
-
-* `CELL_VALUE_FOR_SKIP`: _Optional, default: unset._
-  **Must be valid JSON when set.**
-
-  Same shape and rules as `CELL_VALUE_FOR_NULL`, but for sentinel values mapping to "omit this property from the request body".
-
-  The three sentinel sets (`CELL_VALUE_FOR_NULL`, `CELL_VALUE_FOR_EMPTY_STRING`, `CELL_VALUE_FOR_SKIP`) must be pairwise disjoint — the program fails to start if the same cell value appears in two of them.
-
-  Picking sentinels is the operator's responsibility, since unusual literal cell values may otherwise be ambiguous. For example, in a dataset that may legitimately contain the string `"NULL"` (e.g. as a last name), do not pick `"NULL"` as a sentinel — use something the data is guaranteed not to contain, such as `"<<NULL>>"` or `" __NULL__ "`.
 
 **CSV parsing**
 
@@ -335,6 +269,71 @@ Each block of records results in an API call to the [`POST /v1/batch` endpoint](
   Whether to skip empty lines in the CSV file or to treat them as a valid record.
 
   See: https://csv.js.org/parse/options/skip_empty_lines/
+
+**CSV layout — `send-campaign-to-userids` subcommand**
+
+The CSV must contain:
+
+* A column representing the userId to send a notification to (see `CSV_COLUMN_USER_ID`).
+* A column representing the campaignId to use for fetching the content (see `CSV_COLUMN_CAMPAIGN_ID`).
+* Each record within a file must use the same campaignId. In practice, only the campaignId of the first record is read.
+* Any additional columns are treated as notification parameters of the same name, for personalizing the notification.
+
+Each block of records results in an API call to the [`POST /v1/deliveries` endpoint](https://docs.wonderpush.com/reference/post-deliveries).
+
+* `CSV_COLUMN_USER_ID`: _Optional, default: `user_id`._
+
+  The name of the CSV column that contains the userId associated with the row.
+
+* `CSV_COLUMN_CAMPAIGN_ID`: _Optional, default: `campaign_id`._
+
+  The name of the CSV column that contains the campaignId used to send a notification.
+
+**CSV layout — `update-custom-properties` subcommand**
+
+The CSV must contain:
+
+* A column representing the installationId to update (see `CSV_COLUMN_INSTALLATION_ID`). Rows missing this value are skipped and logged.
+* A column representing the userId associated with the installation (see `CSV_COLUMN_USER_ID`). An empty cell means `userId: null` in the request — the installation is updated regardless of which user it is currently bound to.
+* Any additional columns are treated as custom-property names; the cell value becomes the property value in the resulting `PATCH /v1/installations/<id>` sub-request.
+
+Each block of records results in an API call to the [`POST /v1/batch` endpoint](https://docs.wonderpush.com/reference/post-batch) bundling many `PATCH /v1/installations/<id>?userId=<userId>` sub-requests.
+
+* `CSV_COLUMN_USER_ID`: _Optional, default: `user_id`._
+
+  The name of the CSV column that contains the userId associated with the row.
+
+* `CSV_COLUMN_INSTALLATION_ID`: _Optional, default: `installation_id`._
+
+  The name of the CSV column that contains the installationId to update.
+
+* `EMPTY_CELL_BEHAVIOR`: _Optional, default: `skip`._
+
+  How an empty cell in a custom-property column is interpreted.
+  One of `skip` (the property key is omitted from the request body — no change on WonderPush), `null` (the property key is sent with a `null` value, clearing it on WonderPush), or `empty_string` (the property key is sent with `""`).
+
+  This option only applies to custom-property columns. The `user_id` column always treats an empty cell as `null`.
+
+* `CELL_VALUE_FOR_NULL`: _Optional, default: unset._
+  **Must be valid JSON when set.**
+
+  When set, configures one or more sentinel cell values that map to a `null` property value in the request body (clearing the property on WonderPush). Accepts either a single JSON string (`"NULL"`) or a JSON array of strings (`["NULL", "<null>"]`).
+
+  Matching is case-sensitive and applies only to custom-property cells (not `installation_id` nor `user_id`). The empty string is not allowed (it is reserved for the `EMPTY_CELL_BEHAVIOR` rule).
+
+* `CELL_VALUE_FOR_EMPTY_STRING`: _Optional, default: unset._
+  **Must be valid JSON when set.**
+
+  Same shape and rules as `CELL_VALUE_FOR_NULL`, but for sentinel values mapping to the empty string `""` in the request body.
+
+* `CELL_VALUE_FOR_SKIP`: _Optional, default: unset._
+  **Must be valid JSON when set.**
+
+  Same shape and rules as `CELL_VALUE_FOR_NULL`, but for sentinel values mapping to "omit this property from the request body".
+
+  The three sentinel sets (`CELL_VALUE_FOR_NULL`, `CELL_VALUE_FOR_EMPTY_STRING`, `CELL_VALUE_FOR_SKIP`) must be pairwise disjoint — the program fails to start if the same cell value appears in two of them.
+
+  Picking sentinels is the operator's responsibility, since unusual literal cell values may otherwise be ambiguous. For example, in a dataset that may legitimately contain the string `"NULL"` (e.g. as a last name), do not pick `"NULL"` as a sentinel — use something the data is guaranteed not to contain, such as `"<<NULL>>"` or `" __NULL__ "`.
 
 ## Changelog and releases
 
