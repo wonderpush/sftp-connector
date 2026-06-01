@@ -73,7 +73,7 @@ Same `sftpWatcher.js` loop as `send-campaign-to-userids`. Per-file work in the s
 
 ### Idempotency (important)
 
-Each POST sends `X-WonderPush-Idempotency-Key: ${prefix}${sha1(remotePath).slice(-8)}-${fromRecordHex8}-${toRecordHex8}`. The prefix is subcommand-specific: `WP_IDEMPOTENCY_KEY_PREFIX` defaults to `sftp-sctu-` for `send-campaign-to-userids` and `sftp-ucp-` for `update-custom-properties`, so the two subcommands cannot collide on the same file path. The server remembers idempotency keys for ~7 days. Consequence documented in README: a file deleted and re-added within 7 days with the same content will NOT replay the action. Changing `WP_IDEMPOTENCY_KEY_PREFIX` is the escape hatch.
+Each POST sends `X-WonderPush-Idempotency-Key: ${prefix}${sha1(remotePath).slice(-8)}${fromRecordHex8}${toRecordHex8}${attemptHex2}`, where `attemptHex2` is the 0-based attempt counter (0..255) zero-padded to 2 hex chars — incremented on each retry so that the server treats retries as fresh requests rather than replaying the original response. The prefix is subcommand-specific: `WP_IDEMPOTENCY_KEY_PREFIX` defaults to `sftp-sctu-` for `send-campaign-to-userids` and `sftp-ucp-` for `update-custom-properties`, so the two subcommands cannot collide on the same file path. The server remembers idempotency keys for ~7 days. Consequence documented in README: a file deleted and re-added within 7 days with the same content will NOT replay the action. Changing `WP_IDEMPOTENCY_KEY_PREFIX` is the escape hatch.
 
 ### Backoff in `postQuery.js`
 
@@ -81,10 +81,10 @@ A **single process-wide** `currentBackoffSleepMs` / `nextCallNoSoonerThanDate` i
 
 Response handling rules (read carefully before changing):
 - HTTP 409 with body `error.code === "12045"`: original still being processed — do NOT adjust backoff, do NOT retry.
-- Response header `x-wonderpush-idempotency-initially-started-at` present on error: server replayed a stored result — do NOT adjust backoff, do NOT retry (retrying won't change anything).
+- Response header `x-wonderpush-idempotency-initially-started-at` present on error: server replayed a stored result — never adjust backoff (the original failure already did so). If the replayed status is < 500, do NOT retry. If the replayed status is ≥ 500, retry; additionally if the body carries `.error.code` (WP-source 5xx), bump the attempt counter so the retry uses a fresh idempotency key (otherwise the server would just replay the same stored 5xx).
 - HTTP 429: backoff up; honor `Retry-After` header by taking `max(backoff, retry-after)`; retry.
 - Other 4xx: treat as success-ish for backoff (networking is fine); do NOT retry.
-- 5xx: backoff up, retry.
+- 5xx: backoff up, retry. If the body carries `.error.code` (WP-source 5xx), bump the attempt counter so the next retry uses a fresh idempotency key; gateway/upstream 5xx (no `.error.code`) keep the same key so the server's idempotency store still applies if it has already processed the original.
 - No response (network error): backoff up, retry.
 - Request setup error (no `error.request`): do NOT retry — code bug, retry would just burn CPU.
 

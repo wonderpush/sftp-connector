@@ -47,13 +47,16 @@ const postQuery = async (url, query, file, idempotencyKeyPrefix) => {
 	const remotePathHash = crypto.createHash('sha1').update(query.remotePath).digest('hex').substr(-8);
 	const rangeFromHex = query.range.fromRecord.toString(16).padStart(8, '0');
 	const rangeToHex = query.range.toRecord.toString(16).padStart(8, '0');
-	const idempotencyKey = `${idempotencyKeyPrefix}${remotePathHash}-${rangeFromHex}-${rangeToHex}`;
+	const idempotencyKeyBase = `${idempotencyKeyPrefix}${remotePathHash}${rangeFromHex}${rangeToHex}`;
 
 	let lastResponse = undefined;
+	let attempt = 0;
 	for (let tries = 0; tries <= options.WP_RETRIES_MAX; tries++) {
 		let retry = false;
 		await sleep(nextCallNoSoonerThanDate - new Date().getTime());
 		const start = new Date().getTime();
+		const attemptHex = attempt.toString(16).padStart(2, '0');
+		const idempotencyKey = `${idempotencyKeyBase}${attemptHex}`;
 		try {
 			log({ url, data: query.data, idempotencyKey });
 			const response = await axios.post(url, query.data, {
@@ -98,16 +101,17 @@ const postQuery = async (url, query, file, idempotencyKeyPrefix) => {
 				});
 
 			if (error.response) {
-				// The request was made and the server responded with a status code that falls out of the range of 2xx
-				// NOTE: Retrying will not change the server's response par definition.
+				// The request was made and the server responded with a status code outside the 2xx range.
+				// We treat the response by status as if it were fresh; if it's actually a replay from the
+				// server's idempotency store (`x-wonderpush-idempotency-initially-started-at` set), we skip
+				// the backoff adjustments because the original failure already adjusted them, and the fact
+				// that we now got an answer reflects networking conditions, not server health.
+				// (429 is not gated by isReplayedResponse: rate-limiting kicks in before idempotency on the
+				// server, so 429 responses are never replayed.)
+				const isReplayedResponse = error.response.headers['x-wonderpush-idempotency-initially-started-at'];
 				if (error.response.status === 409 && error.response.data && error.response.data.error && error.response.data.error.code === "12045") {
 					// Original request was well received and is still being processed
 					// Do not adjust backoff to avoid speeding up a possible recovery too quickly
-				} else if (error.response.headers['x-wonderpush-idempotency-initially-started-at']) {
-					// Original request was not successful, using idempotency keys to retry won't change anything.
-					// NOTE: We are hence doing a retry, although in the rare eventuality of the file was recreated, the previous try might have happened up to 7 days earlier.
-					// Do not adjust backoff as we already adjusted once for the previous failure, and the fact that we
-					// now received an answer only reflects a better networking condition, not a better server health.
 				} else if (error.response.status === 429) {
 					// Rate limiting
 					// Backoff in case of multiple concurrent programs trying to respect the rate limit,
@@ -119,13 +123,21 @@ const postQuery = async (url, query, file, idempotencyKeyPrefix) => {
 						nextCallNoSoonerThanDate = Math.max(nextCallNoSoonerThanDate, new Date().getTime() + waitForSec * 1000);
 					}
 					retry = true;
-				} else if (error.response.status >= 400 && error.response.status < 500) {
-					// 4xx denote a client error, so at least we know that networking conditions are better and the server is no worse.
-					adjustBackoffOnSuccess();
 				} else if (error.response.status >= 500) {
 					// 5xx denote a server error, back off to let server heal.
-					adjustBackoffOnFailure();
+					if (!isReplayedResponse) adjustBackoffOnFailure();
 					retry = true;
+					if (error.response.data && error.response.data.error && error.response.data.error.code) {
+						// The 5xx came from the WonderPush server itself (identified by the `.error.code` body):
+						// retrying with the same idempotency key would just replay the stored failure, so bump the
+						// attempt counter to force the server to treat the next try as a fresh request.
+						// Upstream/gateway 5xx (no `.error.code`) keep the same key so the server's idempotency
+						// protection still applies if it has already processed the original request.
+						attempt++;
+					}
+				} else if (error.response.status >= 400 && error.response.status < 500) {
+					// 4xx denote a client error, so at least we know that networking conditions are better and the server is no worse.
+					if (!isReplayedResponse) adjustBackoffOnSuccess();
 				}
 			} else if (!error.request) {
 				// Something happened in setting up the request that triggered an Error
