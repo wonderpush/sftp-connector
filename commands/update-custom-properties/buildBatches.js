@@ -28,14 +28,10 @@ const buildBatches = (records, remotePath, maxRequests) => {
 
 	if (records.length === 0) return queriesArray;
 
-	// Discover the custom-property columns from the first record.
-	// All columns other than installation_id and user_id are treated as custom-property names.
-	const customPropertyColumns = Object.keys(records[0]).filter(
-		column => column !== commandOptions.CSV_COLUMN_INSTALLATION_ID
-			&& column !== options.CSV_COLUMN_USER_ID
-	);
-
 	// Build one PATCH sub-request per usable record.
+	// Each record carries its own column names (parsed upstream by csv-parse,
+	// either from the header line or from CSV_PARSE_COLUMNS). Custom-property
+	// columns are every key other than installation_id and user_id.
 	const patches = [];
 	records.forEach((record, index) => {
 		const installationId = record[commandOptions.CSV_COLUMN_INSTALLATION_ID];
@@ -47,11 +43,18 @@ const buildBatches = (records, remotePath, maxRequests) => {
 		const userId = (typeof userIdRaw === "string" && userIdRaw !== "") ? userIdRaw : null;
 
 		const custom = {};
-		for (const column of customPropertyColumns) {
-			const resolved = resolveCellValue(record[column]);
+		for (const [column, value] of Object.entries(record)) {
+			if (column === commandOptions.CSV_COLUMN_INSTALLATION_ID) continue;
+			if (column === options.CSV_COLUMN_USER_ID) continue;
+			const resolved = resolveCellValue(value);
 			if (resolved !== SKIP) {
 				custom[column] = resolved;
 			}
+		}
+
+		if (Object.keys(custom).length === 0) {
+			log("Skipping row with no custom properties to update at CSV record index:", index);
+			return;
 		}
 
 		patches.push({
