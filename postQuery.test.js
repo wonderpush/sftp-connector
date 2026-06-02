@@ -40,7 +40,7 @@ function run(config, extraEnv = {}) {
 }
 
 test("2xx succeeds without retry", () => {
-	const res = run({ responses: [{ status: 200, body: { ok: true } }] });
+	const res = run({ responses: [{ status: 200, body: { success: true } }] });
 	assert.equal(res.attempts, 1);
 	assert.equal(res.finalStatus, 200);
 });
@@ -53,7 +53,7 @@ test("idempotency key has the documented format", () => {
 });
 
 test("409/12045 is not retried and keeps the same backoff", () => {
-	const res = run({ responses: [{ status: 409, body: { error: { code: "12045" } } }] });
+	const res = run({ responses: [{ status: 409, body: { error: { status: 409, code: "12045", message: "Request in progress" } } }] });
 	assert.equal(res.attempts, 1);
 	assert.equal(res.finalStatus, 409);
 });
@@ -64,7 +64,7 @@ test("other 4xx is not retried", () => {
 	assert.equal(res.finalStatus, 404);
 });
 
-test("plain 5xx is retried with the SAME idempotency key", () => {
+test("non WP-source 5xx is retried with the SAME idempotency key", () => {
 	const res = run({ responses: [{ status: 503, body: {} }, { status: 200 }] });
 	assert.equal(res.attempts, 2);
 	assert.equal(res.finalStatus, 200);
@@ -72,7 +72,7 @@ test("plain 5xx is retried with the SAME idempotency key", () => {
 });
 
 test("WP-source 5xx (body .error.code) is retried with a BUMPED attempt key", () => {
-	const res = run({ responses: [{ status: 500, body: { error: { code: "X" } } }, { status: 200 }] });
+	const res = run({ responses: [{ status: 500, body: { error: { status: 500, code: "12009", message: "Service error" } } }, { status: 200 }] });
 	assert.equal(res.attempts, 2);
 	assert.equal(res.finalStatus, 200);
 	assert.notEqual(res.idempotencyKeys[0], res.idempotencyKeys[1]);
@@ -94,18 +94,18 @@ test("replayed response below 500 is not retried", () => {
 	assert.equal(res.finalStatus, 400);
 });
 
-test("replayed 5xx without .error.code is retried with the same key", () => {
+test("5xx without .error.code is retried with the same key", () => {
 	const res = run({ responses: [
-		{ status: 500, headers: { "x-wonderpush-idempotency-initially-started-at": "2020-01-01T00:00:00Z" } },
+		{ status: 500 },
 		{ status: 200 },
 	] });
 	assert.equal(res.attempts, 2);
 	assert.equal(res.idempotencyKeys[0], res.idempotencyKeys[1]);
 });
 
-test("replayed 5xx with .error.code is retried with a bumped key", () => {
+test("5xx with .error.code is retried with a bumped key", () => {
 	const res = run({ responses: [
-		{ status: 500, headers: { "x-wonderpush-idempotency-initially-started-at": "2020-01-01T00:00:00Z" }, body: { error: { code: "X" } } },
+		{ status: 500, body: { error: { status: 500, code: "12009", message: "Service error" } } },
 		{ status: 200 },
 	] });
 	assert.equal(res.attempts, 2);
@@ -122,13 +122,37 @@ test("a network error (socket destroyed) is retried up to WP_RETRIES_MAX", () =>
 });
 
 test("retries are capped by WP_RETRIES_MAX", () => {
-	const res = run({ responses: [{ status: 500 }] }, { WP_RETRIES_MAX: "2" });
+	const res = run({ responses: [{ status: 502 }] }, { WP_RETRIES_MAX: "2" });
 	assert.equal(res.attempts, 3);
-	assert.equal(res.finalStatus, 500);
+	assert.equal(res.finalStatus, 502);
 });
 
 test("a request-setup error (no error.request) is not retried", () => {
 	const res = run({ badUrl: "htp://127.0.0.1:1/", responses: [{ status: 200 }] });
 	assert.equal(res.finalStatus, null);
 	assert.ok(res.elapsedMs < 800, `expected no retry wait, got ${res.elapsedMs}ms`);
+});
+
+test("replayed 5xx with .error.code is retried with a bumped key", () => {
+	const res = run({ responses: [
+		{ destroy: true },
+		{ status: 500, body: { error: { status: 500, code: "12009", message: "Service error" } }, headers: { "x-wonderpush-idempotency-initially-started-at": "2020-01-01T00:00:00Z" } },
+		{ status: 200 },
+	] });
+	assert.equal(res.attempts, 3);
+	assert.ok(res.idempotencyKeys[0].endsWith("00"));
+	assert.ok(res.idempotencyKeys[1].endsWith("00"));
+	assert.equal(res.idempotencyKeys[0], res.idempotencyKeys[1]);
+	assert.ok(res.idempotencyKeys[2].endsWith("01"));
+	// Only the trailing attempt byte differs; the rest of the key is unchanged.
+	assert.equal(res.idempotencyKeys[0].slice(0, -2), res.idempotencyKeys[2].slice(0, -2));
+});
+
+test("replayed 2xx after a newwork error is not retried", () => {
+	const res = run({ responses: [
+		{ destroy: true },
+		{ status: 200, headers: { "x-wonderpush-idempotency-initially-started-at": "2020-01-01T00:00:00Z" } },
+	] });
+	assert.equal(res.attempts, 2);
+	assert.equal(res.idempotencyKeys[0], res.idempotencyKeys[1]);
 });
