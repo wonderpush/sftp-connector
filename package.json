@@ -1,6 +1,6 @@
 {
   "name": "sftp-connector",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Connect your SFTP to the WonderPush API",
   "private": true,
   "main": "index.js",
