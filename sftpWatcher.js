@@ -127,10 +127,6 @@ export default async function watchSftpFolder(processFile, {
 			.then(async () => {
 				// Determine files to process before starting processing,
 				// so that the candidate files don't change under our feet.
-				// staleFileChecks is already a validated non-negative integer
-				// (default options.STALE_FILE_CHECKS); compare against it directly so that
-				// STALE_FILE_CHECKS=0 (process on first sighting) works instead of
-				// being coerced to 1 by a `|| "1"` fallback.
 				const filesToProcess = Object.keys(candidateFiles).filter(fileName => {
 					if (candidateFiles[fileName] === staleFileChecks) {
 						delete candidateFiles[fileName];
