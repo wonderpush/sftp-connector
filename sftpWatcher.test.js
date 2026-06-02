@@ -120,3 +120,21 @@ test("hidden files in the listing are filtered out and never processed", async (
 	]);
 	assert.deepEqual(processed, ["f.csv"]);
 });
+
+test("STALE_FILE_CHECKS=0 processes a file on its first sighting", async () => {
+	const processed = await runWatch([
+		[],
+		[entry("f.csv", 10, 1000)],
+	], { staleFileChecks: 0 });
+	assert.deepEqual(processed, ["f.csv"]);
+});
+
+test("STALE_FILE_CHECKS=2 requires two stable polls before processing", async () => {
+	const processed = await runWatch([
+		[],
+		[entry("f.csv", 10, 1000)], // counter 0
+		[entry("f.csv", 10, 1000)], // counter 1 (not yet)
+		[entry("f.csv", 10, 1000)], // counter 2 == staleChecks -> processed
+	], { staleFileChecks: 2 });
+	assert.deepEqual(processed, ["f.csv"]);
+});
