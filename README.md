@@ -348,7 +348,7 @@ Each block of records results in an API call to the [`POST /v1/batch` endpoint](
 
   The three sentinel sets (`CELL_VALUE_FOR_NULL`, `CELL_VALUE_FOR_EMPTY_STRING`, `CELL_VALUE_FOR_SKIP`) must be pairwise disjoint — the program fails to start if the same cell value appears in two of them.
 
-  Picking sentinels is the operator's responsibility, since unusual literal cell values may otherwise be ambiguous. For example, in a dataset that may legitimately contain the string `"NULL"` (e.g. as a last name), do not pick `"NULL"` as a sentinel — use something the data is guaranteed not to contain, such as `"<<NULL>>"` or `" __NULL__ "`.
+  Picking sentinels is the operator's responsibility, since unusual literal cell values may otherwise be ambiguous. For example, in a dataset that may legitimately contain the string `"NULL"` (e.g. as a last name), do not pick `"NULL"` as a sentinel — use something the data is guaranteed not to contain, such as `"<<NULL>>"` or `"__NULL__"`.
 
 ## Changelog and releases
 
