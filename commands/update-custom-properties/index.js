@@ -8,8 +8,8 @@ import buildBatches from "./buildBatches.js";
 import postQuery from "../../postQuery.js";
 import watchSftpFolder from "../../sftpWatcher.js";
 
-// Inspect the WonderPush /v1/batch response and log any sub-request that
-// returned an error status. Per the agreed contract: log and continue, no
+// Inspect the WonderPush /v1/batch response and log any sub-request that did
+// not succeed. Per the agreed contract: log and continue, no
 // retry, no backoff adjustment. Outer HTTP-level errors are already handled
 // inside postQuery and would result in a different response shape.
 function logBatchSubResponses(response, fileName, range) {
@@ -22,15 +22,13 @@ function logBatchSubResponses(response, fileName, range) {
 	}
 	let failures = 0;
 	subResponses.forEach((sub, index) => {
-		const status = sub && sub.status;
-		if (typeof status !== "number" || status >= 400) {
+		if (!sub || sub.success !== true) {
 			failures++;
 			log("Batch sub-request failure", {
 				file: fileName,
 				range,
 				requestIndex: index,
-				status,
-				body: sub && sub.body,
+				response: sub,
 			});
 		}
 	});
