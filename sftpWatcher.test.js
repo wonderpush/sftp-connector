@@ -129,8 +129,25 @@ test("STALE_FILE_CHECKS=0 processes a file on its first sighting", async () => {
 	assert.deepEqual(processed, ["f.csv"]);
 });
 
-test("STALE_FILE_CHECKS=2 requires two stable polls before processing", async () => {
+test("STALE_FILE_CHECKS=0 processes a changing file only on its first sighting", async () => {
 	const processed = await runWatch([
+		[],
+		[entry("f.csv", 10, 1000)],
+		[entry("f.csv", 20, 1000)],
+		[entry("f.csv", 30, 1000)],
+	], { staleFileChecks: 0 });
+	assert.deepEqual(processed, ["f.csv"]);
+});
+
+test("STALE_FILE_CHECKS=2 requires two stable polls before processing", async () => {
+	let processed = await runWatch([
+		[],
+		[entry("f.csv", 10, 1000)], // counter 0
+		[entry("f.csv", 10, 1000)], // counter 1 (not yet)
+	], { staleFileChecks: 2 });
+	assert.deepEqual(processed, []);
+
+	processed = await runWatch([
 		[],
 		[entry("f.csv", 10, 1000)], // counter 0
 		[entry("f.csv", 10, 1000)], // counter 1 (not yet)
