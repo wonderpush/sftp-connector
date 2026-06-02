@@ -8,7 +8,8 @@
     "start": "node index.js",
     "start:send-campaign-to-userids": "node commands/send-campaign-to-userids/index.js",
     "start:update-custom-properties": "node commands/update-custom-properties/index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:e2e": "E2E=1 node --test getFilesList.e2e.test.js"
   },
   "keywords": [
     "wonderpush",
