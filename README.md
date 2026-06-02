@@ -93,6 +93,13 @@ docker run -ti --init --env WP_ACCESS_TOKEN=… --env SFTP_HOST=… --env SFTP_P
 
 The `--init` option is necessary for NodeJS to handle interrupt signals and quit properly.
 
+### Tests
+
+- `npm test` — unit/integration tests via Node's built-in runner (`node --test`). No Docker required; the SFTP end-to-end test self-skips when `E2E` is unset.
+- `npm run test:e2e` — end-to-end test of the SFTP listing against a throwaway `atmoz/sftp` container. Requires Docker and the `ssh-keygen` CLI; self-skips if Docker is unavailable.
+
+The `postQuery` tests start a local HTTPS mock and require the `openssl` CLI to generate a self-signed certificate. None of these tests contact the real WonderPush API.
+
 ## Configuration
 
 The program uses environment variables exclusively.
