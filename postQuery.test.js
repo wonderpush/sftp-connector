@@ -71,16 +71,6 @@ test("non WP-source 5xx is retried with the SAME idempotency key", () => {
 	assert.equal(res.idempotencyKeys[0], res.idempotencyKeys[1]);
 });
 
-test("WP-source 5xx (body .error.code) is retried with a BUMPED attempt key", () => {
-	const res = run({ responses: [{ status: 500, body: { error: { status: 500, code: "12009", message: "Service error" } } }, { status: 200 }] });
-	assert.equal(res.attempts, 2);
-	assert.equal(res.finalStatus, 200);
-	assert.notEqual(res.idempotencyKeys[0], res.idempotencyKeys[1]);
-	assert.ok(res.idempotencyKeys[0].endsWith("00"));
-	assert.ok(res.idempotencyKeys[1].endsWith("01"));
-	assert.equal(res.idempotencyKeys[0].slice(0, -2), res.idempotencyKeys[1].slice(0, -2));
-});
-
 test("429 is retried and honours Retry-After", () => {
 	const res = run({ responses: [{ status: 429, headers: { "retry-after": "1" } }, { status: 200 }] });
 	assert.equal(res.attempts, 2);
@@ -140,15 +130,16 @@ test("replayed 5xx with .error.code is retried with a bumped key", () => {
 		{ status: 200 },
 	] });
 	assert.equal(res.attempts, 3);
-	assert.ok(res.idempotencyKeys[0].endsWith("00"));
-	assert.ok(res.idempotencyKeys[1].endsWith("00"));
+	assert.equal(res.finalStatus, 200);
 	assert.equal(res.idempotencyKeys[0], res.idempotencyKeys[1]);
+	assert.notEqual(res.idempotencyKeys[0], res.idempotencyKeys[2]);
+	assert.ok(res.idempotencyKeys[0].endsWith("00"));
 	assert.ok(res.idempotencyKeys[2].endsWith("01"));
 	// Only the trailing attempt byte differs; the rest of the key is unchanged.
 	assert.equal(res.idempotencyKeys[0].slice(0, -2), res.idempotencyKeys[2].slice(0, -2));
 });
 
-test("replayed 2xx after a newwork error is not retried", () => {
+test("replayed 2xx after a network error is not retried", () => {
 	const res = run({ responses: [
 		{ destroy: true },
 		{ status: 200, headers: { "x-wonderpush-idempotency-initially-started-at": "2020-01-01T00:00:00Z" } },
